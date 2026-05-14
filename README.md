@@ -40,9 +40,16 @@ The server auto-detects two modes:
 
 Category and topic names are derived from folder/file slugs (hyphens → spaces, words capitalised). No config files needed.
 
+## Access modes
+
+| Mode | URL | Description |
+|------|-----|-------------|
+| Viewer | `/` | Read-only, no edit controls |
+| Admin | `/?admin` | Shows unlock button, enables editing |
+
 ## Editing
 
-Click the lock icon to unlock edit mode. Clicking any topic opens an inline editor. Save writes directly back to the `.md` file.
+Add `?admin` to the URL to show the lock icon. Click it to unlock edit mode. Clicking any topic opens an inline editor. Save writes directly back to the `.md` file.
 
 ## API
 
