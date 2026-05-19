@@ -259,6 +259,26 @@ class WikiHandler(BaseHTTPRequestHandler):
             self.send_json({"slug": slug, "title": name, "content": content})
             return
 
+        if parsed.path == "/api/wiki":
+            name = body.get("name", "").strip()
+            if not name:
+                self.send_json({"error": "missing name"}, 400)
+                return
+            slug = to_slug(name)
+            if not slug:
+                self.send_json({"error": "invalid name"}, 400)
+                return
+            wiki_dir = safe_path(self.root, slug)
+            if not wiki_dir:
+                self.send_json({"error": "invalid path"}, 400)
+                return
+            if wiki_dir.exists():
+                self.send_json({"error": "wiki already exists"}, 409)
+                return
+            (wiki_dir / "topics").mkdir(parents=True)
+            self.send_json({"slug": slug, "display": slug_to_display(slug)})
+            return
+
         if parsed.path == "/api/category":
             wiki = body.get("wiki")
             name = body.get("name", "").strip()
