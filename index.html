@@ -115,6 +115,8 @@
     .breadcrumb .bc-link:hover { color: var(--accent); text-decoration: underline; }
 
     .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .btn-sidebar-toggle { background: transparent; border: none; color: var(--text3); cursor: pointer; padding: 4px 6px; font-size: 16px; line-height: 1; transition: color 0.15s; }
+    .btn-sidebar-toggle:hover { color: var(--text); }
     .save-status { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); transition: color 0.3s; white-space: nowrap; display: none; }
     body.unlocked .save-status { display: block; }
     .save-status.saving { color: var(--text2); }
@@ -196,7 +198,7 @@
       resize: vertical; outline: none; transition: border-color 0.2s;
     }
     .editor-textarea:focus { border-color: var(--accent); }
-    .editor-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .editor-actions { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 8px; position: sticky; top: 16px; z-index: 10; }
     .btn-save-topic { background: var(--accent); color: #000; border: none; border-radius: 7px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Geist', sans-serif; transition: background 0.15s; }
     .btn-save-topic:hover { background: var(--accent-mid); }
     .btn-cancel-edit { background: transparent; border: 1px solid var(--border2); color: var(--text2); border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: 'Geist', sans-serif; transition: all 0.15s; }
@@ -286,6 +288,7 @@
         <span id="breadcrumb-title" class="current">início</span>
       </div>
       <div class="topbar-right">
+        <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" onclick="toggleSidebar()" title="toggle sidebar">☰</button>
         <span class="save-status" id="save-status"></span>
         <button class="btn-back" id="btn-back" onclick="backToHub()">← hub</button>
         <button class="btn-delete" id="btn-delete" onclick="deleteCurrentTopic()">✕ apagar tópico</button>
@@ -681,6 +684,10 @@ function parseMarkdown(md) {
   return html;
 }
 
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('visible');
+}
+
 function toggleLock() {
   locked = !locked;
   const btn = document.getElementById('btn-lock');
@@ -751,8 +758,8 @@ function openEditor(rawMd) {
 
   actions.appendChild(saveBtn);
   actions.appendChild(cancelBtn);
-  wrap.appendChild(ta);
   wrap.appendChild(actions);
+  wrap.appendChild(ta);
 
   area.innerHTML = '';
   area.appendChild(wrap);
