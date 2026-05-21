@@ -766,6 +766,10 @@ function openEditor(rawMd) {
 
   const ta = document.createElement('textarea');
   ta.className = 'editor-textarea';
+  ta.spellcheck = false;
+  ta.autocomplete = 'off';
+  ta.setAttribute('autocorrect', 'off');
+  ta.setAttribute('autocapitalize', 'off');
   ta.value = rawMd;
   requestAnimationFrame(() => { ta.scrollTop = 0; ta.setSelectionRange(0, 0); });
 
