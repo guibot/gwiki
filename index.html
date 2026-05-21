@@ -233,6 +233,21 @@
     .btn-back { display: none; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border2); border-radius: 6px; padding: 5px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); cursor: pointer; transition: all 0.15s; }
     .btn-back:hover { color: var(--text); border-color: var(--text3); }
 
+    /* ── MODAL ── */
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+    #modal-overlay.visible { display: flex; }
+    #modal-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px 28px 22px; min-width: 320px; max-width: 420px; width: 90vw; display: flex; flex-direction: column; gap: 14px; }
+    #modal-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    #modal-input { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text); font-family: 'Geist', sans-serif; outline: none; width: 100%; transition: border-color 0.15s; }
+    #modal-input:focus { border-color: var(--accent); }
+    #modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-modal-ok { background: var(--accent); color: #000; border: none; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Geist', sans-serif; }
+    .btn-modal-ok:hover { background: var(--accent-mid); }
+    .btn-modal-cancel { background: transparent; border: 1px solid var(--border2); color: var(--text2); border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: 'Geist', sans-serif; }
+    .btn-modal-cancel:hover { background: var(--border); color: var(--text); }
+    .btn-modal-danger { background: var(--danger); color: #fff; border: none; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Geist', sans-serif; }
+    .btn-modal-danger:hover { opacity: 0.85; }
+
     /* ── MOBILE ── */
     @media (max-width: 640px) {
       #app { position: relative; }
@@ -306,6 +321,19 @@
   </div>
 
 </div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div id="modal-title"></div>
+    <input id="modal-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div id="modal-actions">
+      <button class="btn-modal-cancel" id="modal-cancel">Cancelar</button>
+      <button class="btn-modal-ok" id="modal-ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── STATE ─────────────────────────────────────────────
 let categories = [];
@@ -313,6 +341,62 @@ let currentTopic = null;
 let locked = true;
 let activeWiki = null;
 let hubMode = false;
+
+// ── MODAL ─────────────────────────────────────────────
+function showPrompt(title, placeholder = '') {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const input = document.getElementById('modal-input');
+    const ok = document.getElementById('modal-ok');
+    const cancel = document.getElementById('modal-cancel');
+    const okBtn = document.getElementById('modal-ok');
+    okBtn.className = 'btn-modal-ok';
+    input.style.display = '';
+    titleEl.textContent = title;
+    input.value = '';
+    input.placeholder = placeholder;
+    overlay.classList.add('visible');
+    input.focus();
+    const finish = (val) => {
+      overlay.classList.remove('visible');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    const onOk = () => finish(input.value.trim() || null);
+    const onCancel = () => finish(null);
+    const onKey = (e) => { if (e.key === 'Enter') onOk(); else if (e.key === 'Escape') onCancel(); };
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+function showConfirm(title) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const input = document.getElementById('modal-input');
+    const ok = document.getElementById('modal-ok');
+    const cancel = document.getElementById('modal-cancel');
+    input.style.display = 'none';
+    ok.className = 'btn-modal-danger';
+    titleEl.textContent = title;
+    overlay.classList.add('visible');
+    const finish = (val) => {
+      overlay.classList.remove('visible');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      resolve(val);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+  });
+}
 
 // ── HELPERS ───────────────────────────────────────────
 function slugToDisplay(slug) {
@@ -429,7 +513,7 @@ function showHub(wikis) {
   });
   const addCard = document.createElement('div');
   addCard.className = 'hub-card hub-card-add';
-  addCard.textContent = '＋ new category';
+  addCard.textContent = '＋ new wiki';
   addCard.addEventListener('click', addWiki);
   grid.appendChild(addCard);
 
@@ -736,8 +820,8 @@ function toggleHubLock() {
 }
 
 async function addWiki() {
-  const name = prompt('Nome da nova wiki:');
-  if (!name || !name.trim()) return;
+  const name = await showPrompt('Nome da nova wiki:', 'ex: minha-wiki');
+  if (!name) return;
   try {
     await apiFetch('/api/wiki', {
       method: 'POST',
@@ -832,8 +916,8 @@ async function saveTopic(rawMd) {
 async function addTopic(catIdx) {
   const cat = categories[catIdx];
   if (!cat) return;
-  const name = prompt(`Novo tópico em "${cat.display}":\n(ex: "meu topico")`);
-  if (!name || !name.trim()) return;
+  const name = await showPrompt(`Novo tópico em "${cat.display}":`, 'ex: meu topico');
+  if (!name) return;
 
   try {
     const data = await apiFetch('/api/topic', {
@@ -854,8 +938,8 @@ async function addTopic(catIdx) {
 }
 
 async function addCategory() {
-  const name = prompt('Nome da nova categoria:');
-  if (!name || !name.trim()) return;
+  const name = await showPrompt('Nome da nova categoria:', 'ex: minha-categoria');
+  if (!name) return;
 
   try {
     const data = await apiFetch('/api/category', {
@@ -874,7 +958,7 @@ async function addCategory() {
 
 async function deleteCurrentTopic() {
   if (!currentTopic) return;
-  const confirmed = confirm(`Apagar "${currentTopic.title}"?\n\nEsta acção é irreversível.`);
+  const confirmed = await showConfirm(`Apagar "${currentTopic.title}"? Esta acção é irreversível.`);
   if (!confirmed) return;
 
   try {
