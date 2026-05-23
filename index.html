@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wiki</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Geist:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      --bg: #0d0e10; --surface: #13151a; --surface2: #1a1d24;
+      --border: #252830; --border2: #2e3240;
+      --accent: #4ade80; --accent-dim: rgba(74,222,128,0.12);
+      --accent-mid: #22c55e;
+      --blue: #60a5fa; --blue-dim: rgba(96,165,250,0.1);
+      --text: #e2e4ea; --text2: #9ca3af; --text3: #6b7280;
+      --code-bg: #111318; --danger: #f87171;
+      --code-size: 14px;
+      --sidebar-w: 268px; --header-h: 52px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; font-family: 'Geist', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; -webkit-font-smoothing: antialiased; }
+
+    /* ── LAYOUT ── */
+    #app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── FIRST RUN ── */
+    #first-run {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    #first-run .logo-icon {
+      width: 48px; height: 48px; background: var(--accent); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; color: #000; font-weight: 800;
+    }
+    #first-run h1 { font-size: 28px; font-weight: 700; color: #fff; }
+    #first-run p { font-size: 14px; color: var(--text2); text-align: center; max-width: 380px; line-height: 1.7; }
+    #first-run .btn-open {
+      background: var(--accent); color: #000; border: none; border-radius: 9px;
+      padding: 11px 24px; font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: 'Geist', sans-serif; transition: background 0.15s;
+    }
+    #first-run .btn-open:hover { background: var(--accent-mid); }
+    #first-run .warn {
+      font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      background: var(--surface); border-right: 1px solid var(--border);
+      display: none; flex-direction: column; overflow: hidden;
+    }
+    #sidebar.visible { display: flex; }
+
+    #sidebar-top { padding: 18px 18px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .logo { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer; }
+    .logo .logo-icon { width: 26px; height: 26px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #000; font-weight: 800; flex-shrink: 0; transition: background 0.15s; }
+    .logo:hover .logo-icon { background: var(--accent-mid); }
+    .logo-text { font-size: 13px; font-weight: 700; color: var(--text); }
+    .logo-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); letter-spacing: 0.05em; }
+
+    #search-wrap { position: relative; }
+    #search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
+    #search { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 7px 10px 7px 30px; font-size: 12px; color: var(--text); font-family: 'JetBrains Mono', monospace; outline: none; transition: border-color 0.2s; }
+    #search:focus { border-color: var(--accent); }
+    #search::placeholder { color: var(--text3); }
+
+    #nav { overflow-y: auto; flex: 1; padding: 8px 0 16px; }
+    #nav::-webkit-scrollbar { width: 3px; }
+    #nav::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .nav-category { margin-top: 4px; }
+    .nav-category-header { display: flex; align-items: center; gap: 6px; padding: 8px 18px 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); font-family: 'JetBrains Mono', monospace; cursor: pointer; user-select: none; }
+    .nav-category-header .cat-icon { font-size: 9px; color: var(--accent); }
+    .nav-category-header .chevron { margin-left: auto; transition: transform 0.2s; font-size: 9px; color: var(--text3); }
+    .nav-category.collapsed .chevron { transform: rotate(-90deg); }
+    .nav-category.collapsed .nav-items { display: none; }
+
+    .nav-item { display: flex; align-items: center; padding: 6px 18px 6px 28px; font-size: 13px; color: var(--text2); cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; gap: 7px; }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.025); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); font-weight: 600; }
+    .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+    .nav-item.active .nav-dot { background: var(--accent); }
+
+    .nav-add-topic {
+      display: none; margin: 3px 12px 6px; padding: 4px 8px;
+      border: 1px dashed var(--border2); border-radius: 5px;
+      font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s;
+    }
+    .nav-add-topic:hover { border-color: var(--accent); color: var(--accent); }
+    .nav-add-category {
+      display: none; margin: 8px 12px 4px; padding: 6px 8px;
+      border: 1px dashed var(--border2); border-radius: 5px;
+      font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace;
+      cursor: pointer; text-align: center; transition: border-color 0.15s, color 0.15s;
+    }
+    .nav-add-category:hover { border-color: var(--accent); color: var(--accent); }
+
+    body.unlocked .nav-add-topic,
+    body.unlocked .nav-add-category { display: block; }
+
+    #no-results { display: none; padding: 40px 0; text-align: center; color: var(--text3); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+    /* ── MAIN ── */
+    #main { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+    #main.visible { display: flex; }
+
+    #topbar { height: var(--header-h); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 36px; gap: 10px; flex-shrink: 0; background: var(--surface); }
+    .breadcrumb { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+    .breadcrumb .sep { color: var(--border2); }
+    .breadcrumb .current { color: var(--text2); }
+    .breadcrumb .bc-link { cursor: pointer; }
+    .breadcrumb .bc-link:hover { color: var(--accent); text-decoration: underline; }
+
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .btn-sidebar-toggle { background: transparent; border: none; color: var(--text3); cursor: pointer; padding: 4px 6px; font-size: 16px; line-height: 1; transition: color 0.15s; }
+    .btn-sidebar-toggle:hover { color: var(--text); }
+    .save-status { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); transition: color 0.3s; white-space: nowrap; display: none; }
+    body.unlocked .save-status { display: block; }
+    .save-status.saving { color: var(--text2); }
+    .save-status.saved  { color: var(--accent); }
+    .save-status.error  { color: var(--danger); }
+
+    .btn-delete {
+      display: none; background: transparent; border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 10px; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+      color: var(--text3); cursor: pointer; transition: all 0.15s;
+    }
+    .btn-delete:hover { border-color: var(--danger); color: var(--danger); background: rgba(248,113,113,0.07); }
+    body.unlocked .btn-delete.visible { display: block; }
+
+    .btn-lock { display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text2); border: 1.5px solid var(--border2); border-radius: 7px; padding: 7px 13px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.05em; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .btn-lock:hover { background: var(--border); color: var(--text); }
+    .btn-lock.locked { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .btn-lock.locked:hover { background: #ccc; }
+    body.viewer .btn-lock { display: none; }
+
+    #content-area { flex: 1; overflow-y: auto; padding: 44px 60px 80px; max-width: 860px; }
+    body.editing #content-area { max-width: unset; padding: 12px 16px; overflow: hidden; display: flex; flex-direction: column; }
+    #content-area::-webkit-scrollbar { width: 5px; }
+    #content-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    /* ── WELCOME ── */
+    #welcome { padding: 60px 0 0; }
+    #welcome h1 { font-size: 40px; font-weight: 800; color: #fff; line-height: 1.05; margin-bottom: 14px; }
+    #welcome h1 span { color: var(--accent); }
+    #welcome p { font-size: 15px; color: var(--text2); line-height: 1.75; max-width: 540px; margin-bottom: 36px; }
+    .welcome-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+    .welcome-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; cursor: pointer; transition: all 0.15s; }
+    .welcome-card:hover { border-color: var(--border2); background: var(--surface2); transform: translateY(-1px); }
+    .welcome-card .wc-icon { font-size: 18px; margin-bottom: 8px; }
+    .welcome-card .wc-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .welcome-card .wc-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
+    /* ── TOPIC ── */
+    .topic-page { animation: fadeUp 0.18s ease; cursor: default; color: var(--text); }
+    body.unlocked .topic-page { cursor: pointer; }
+    body.unlocked .topic-page:hover { background: rgba(74,222,128,0.03); border-radius: 8px; outline: 1px dashed var(--border2); }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .topic-page h1, .editor-preview h1 { font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 18px; line-height: 1.1; }
+    .topic-page h2, .editor-preview h2 { font-size: 15px; font-weight: 700; color: var(--blue); margin: 30px 0 10px; padding-bottom: 7px; border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.03em; }
+    .topic-page h3, .editor-preview h3 { font-size: 12px; font-weight: 600; color: var(--text2); margin: 18px 0 7px; text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; }
+    .topic-page p, .editor-preview p { font-size: 15px; line-height: 1.8; color: #c8cdd8; margin-bottom: 12px; }
+    .topic-page ul, .topic-page ol, .editor-preview ul, .editor-preview ol { padding-left: 0; list-style: none; margin-bottom: 12px; }
+    .topic-page ul li, .topic-page ol li, .editor-preview ul li, .editor-preview ol li { font-size: 15px; line-height: 1.75; color: #c8cdd8; padding: 3px 0 3px 18px; position: relative; }
+    .topic-page ul li::before, .editor-preview ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-size: 11px; top: 6px; }
+    .topic-page ol, .editor-preview ol { counter-reset: item; }
+    .topic-page ol li, .editor-preview ol li { counter-increment: item; }
+    .topic-page ol li::before, .editor-preview ol li::before { content: counter(item) '.'; position: absolute; left: 0; color: var(--accent); font-size: 12px; font-family: 'JetBrains Mono', monospace; font-weight: 600; top: 4px; }
+    .topic-page a, .editor-preview a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(74,222,128,0.3); transition: border-color 0.15s; }
+    .topic-page a:hover, .editor-preview a:hover { border-bottom-color: var(--accent); }
+    .md-img { max-width: 100%; border-radius: 8px; margin: 12px 0; display: block; border: 1px solid var(--border); }
+    .topic-page p code, .topic-page li code, .editor-preview p code, .editor-preview li code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; color: var(--blue); }
+    .topic-page pre, .editor-preview pre { position: relative; background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; overflow-x: auto; margin: 12px 0 18px; }
+    .topic-page pre code, .editor-preview pre code { font-family: 'JetBrains Mono', monospace; font-size: var(--code-size); line-height: 1.7; color: #e2e8f0; background: none; border: none; padding: 0; }
+    .copy-btn {
+      position: absolute; top: 10px; right: 10px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 5px; padding: 3px 8px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3);
+      cursor: pointer; opacity: 0; transition: opacity 0.15s, color 0.15s;
+    }
+    .topic-page pre:hover .copy-btn, .editor-preview pre:hover .copy-btn { opacity: 1; }
+    .copy-btn.copied { color: var(--accent); border-color: var(--accent); }
+    .callout { background: var(--blue-dim); border: 1px solid rgba(96,165,250,0.2); border-left: 3px solid var(--blue); border-radius: 8px; padding: 12px 16px; margin: 14px 0; font-size: 13px; color: #93c5fd; line-height: 1.65; }
+    .callout.warn { background: rgba(251,191,36,0.07); border-color: rgba(251,191,36,0.2); border-left-color: #fbbf24; color: #fcd34d; }
+
+    /* ── EDITOR ── */
+    .editor-wrap { animation: fadeUp 0.15s ease; display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; }
+    .img-select-overlay { position: absolute; pointer-events: none; z-index: 10; border: 2px solid var(--accent); box-sizing: border-box; display: none; }
+    .img-select-overlay.active { display: block; }
+    .img-resize-handle { position: absolute; width: 10px; height: 10px; background: var(--accent); border-radius: 2px; pointer-events: all; }
+    .img-resize-handle.nw { top: -5px; left: -5px; cursor: nw-resize; }
+    .img-resize-handle.ne { top: -5px; right: -5px; cursor: ne-resize; }
+    .img-resize-handle.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+    .img-resize-handle.se { bottom: -5px; right: -5px; cursor: se-resize; }
+    .editor-panes { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .editor-textarea {
+      flex: 1; min-height: 0; background: var(--surface2);
+      border: 1px solid var(--border2); border-radius: 10px;
+      padding: 16px 18px; font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; line-height: 1.75; color: var(--text);
+      resize: none; outline: none; transition: border-color 0.2s; overflow-y: auto;
+    }
+    .editor-textarea:focus { border-color: var(--accent); }
+    .editor-preview[contenteditable] { outline: none; cursor: text; }
+    .editor-preview[contenteditable]:focus { border-color: var(--accent); }
+    .wysiwyg-toolbar {
+      display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 8px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 5px 8px; flex-shrink: 0;
+    }
+    .wysiwyg-btn {
+      background: transparent; border: 1px solid transparent; border-radius: 5px;
+      padding: 3px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--text2); cursor: pointer; transition: all 0.12s; min-width: 28px; text-align: center;
+    }
+    .wysiwyg-btn:hover { background: var(--border); color: var(--text); }
+    .wysiwyg-sep { width: 1px; background: var(--border2); margin: 3px 4px; }
+    .editor-preview {
+      flex: 1; min-height: 0; background: var(--surface2);
+      border: 1px solid var(--border2); border-radius: 10px;
+      padding: 16px 18px; overflow-y: auto; font-size: 14px; line-height: 1.75; color: var(--text);
+    }
+    .editor-actions { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 8px; position: sticky; top: 16px; z-index: 10; }
+    .btn-save-topic { background: var(--accent); color: #000; border: none; border-radius: 7px; padding: 8px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Geist', sans-serif; transition: background 0.15s; }
+    .btn-save-topic:hover { background: var(--accent-mid); }
+    .btn-cancel-edit { background: transparent; border: 1px solid var(--border2); color: var(--text2); border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: 'Geist', sans-serif; transition: all 0.15s; }
+    .btn-cancel-edit:hover { background: var(--border); color: var(--text); }
+
+    /* ── HUB ── */
+    #hub { flex: 1; display: none; flex-direction: column; overflow-y: auto; padding: 60px 64px 80px; }
+    #hub.visible { display: flex; }
+    #hub h1 { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 10px; line-height: 1.1; }
+    #hub h1 span { color: var(--accent); }
+    #hub > p { font-size: 14px; color: var(--text2); margin-bottom: 36px; line-height: 1.7; }
+    .hub-topbar { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px; min-height: 32px; }
+    .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+    .hub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; cursor: pointer; transition: all 0.15s; }
+    .hub-card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-2px); }
+    .hub-card-add { border-style: dashed; cursor: pointer; display: none; align-items: center; justify-content: center; color: var(--text3); font-family: 'JetBrains Mono', monospace; font-size: 12px; gap: 8px; min-height: 80px; }
+    .hub-card-add:hover { border-color: var(--accent); color: var(--accent); background: transparent; transform: none; }
+    body.hub-unlocked .hub-card-add { display: flex; }
+    body.viewer .btn-hub-lock { display: none; }
+    .hub-card-icon { font-size: 20px; margin-bottom: 10px; color: var(--accent); }
+    .hub-card-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
+    .hub-card-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
+
+    /* ── BACK BUTTON ── */
+    .btn-back { display: none; align-items: center; gap: 5px; background: transparent; border: 1px solid var(--border2); border-radius: 6px; padding: 5px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); cursor: pointer; transition: all 0.15s; }
+    .btn-back:hover { color: var(--text); border-color: var(--text3); }
+
+    /* ── MODAL ── */
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+    #modal-overlay.visible { display: flex; }
+    #modal-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px 28px 22px; min-width: 320px; max-width: 420px; width: 90vw; display: flex; flex-direction: column; gap: 14px; }
+    #modal-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    #modal-input { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text); font-family: 'Geist', sans-serif; outline: none; width: 100%; transition: border-color 0.15s; }
+    #modal-input:focus { border-color: var(--accent); }
+    #modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-modal-ok { background: var(--accent); color: #000; border: none; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Geist', sans-serif; }
+    .btn-modal-ok:hover { background: var(--accent-mid); }
+    .btn-modal-cancel { background: transparent; border: 1px solid var(--border2); color: var(--text2); border-radius: 7px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-family: 'Geist', sans-serif; }
+    .btn-modal-cancel:hover { background: var(--border); color: var(--text); }
+    .btn-modal-danger { background: var(--danger); color: #fff; border: none; border-radius: 7px; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Geist', sans-serif; }
+    .btn-modal-danger:hover { opacity: 0.85; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 640px) {
+      #app { position: relative; }
+      #sidebar { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; min-width: unset; }
+      #content-area { padding: 24px 18px 60px; }
+      #hub { padding: 32px 18px 60px; }
+      #topbar { padding: 0 14px; gap: 6px; }
+      .breadcrumb { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 55vw; }
+      .btn-lock { padding: 6px 10px; font-size: 10px; }
+      .hub-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LOADING -->
+  <div id="first-run">
+    <div class="logo-icon">G</div>
+    <h1>Wiki</h1>
+    <p>A carregar…</p>
+  </div>
+
+  <!-- HUB -->
+  <div id="hub">
+    <h1>GWiki<br><span>Hub</span></h1>
+    <div class="hub-topbar">
+      <button class="btn-lock locked btn-hub-lock" id="btn-hub-lock" onclick="toggleHubLock()">⊘ unlock</button>
+    </div>
+    <div class="hub-grid" id="hub-grid"></div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div id="sidebar-top">
+      <div class="logo" onclick="document.getElementById('btn-back').style.display !== 'none' ? backToHub() : buildWelcome()">
+        <div class="logo-icon">G</div>
+        <div>
+          <div class="logo-text" id="wiki-name">Focus</div>
+          <div class="logo-sub" id="wiki-label">wiki</div>
+        </div>
+      </div>
+      <div id="search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search" type="text" placeholder="Pesquisar tópico...">
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div id="no-results">nenhum resultado</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="hubMode ? backToHub() : buildWelcome()">wiki</span>
+        <span class="sep">/</span>
+        <span id="breadcrumb-cat" class="bc-link" onclick="scrollToCurrentCat()">—</span>
+        <span class="sep">/</span>
+        <span id="breadcrumb-title" class="current">início</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn-sidebar-toggle" id="btn-sidebar-toggle" onclick="toggleSidebar()" title="toggle sidebar">☰</button>
+        <span class="save-status" id="save-status"></span>
+        <button class="btn-back" id="btn-back" onclick="backToHub()">← hub</button>
+        <button class="btn-delete" id="btn-delete" onclick="deleteCurrentTopic()">✕ apagar tópico</button>
+        <button class="btn-lock locked" id="btn-lock" onclick="toggleLock()">⊘ unlock</button>
+      </div>
+    </div>
+    <div id="content-area"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <div id="modal-title"></div>
+    <input id="modal-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div id="modal-actions">
+      <button class="btn-modal-cancel" id="modal-cancel">Cancelar</button>
+      <button class="btn-modal-ok" id="modal-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────
+let categories = [];
+let currentTopic = null;
+let locked = true;
+let activeWiki = null;
+let hubMode = false;
+
+// ── MODAL ─────────────────────────────────────────────
+function showPrompt(title, placeholder = '') {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const input = document.getElementById('modal-input');
+    const ok = document.getElementById('modal-ok');
+    const cancel = document.getElementById('modal-cancel');
+    const okBtn = document.getElementById('modal-ok');
+    okBtn.className = 'btn-modal-ok';
+    input.style.display = '';
+    titleEl.textContent = title;
+    input.value = '';
+    input.placeholder = placeholder;
+    overlay.classList.add('visible');
+    input.focus();
+    const finish = (val) => {
+      overlay.classList.remove('visible');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    const onOk = () => finish(input.value.trim() || null);
+    const onCancel = () => finish(null);
+    const onKey = (e) => { if (e.key === 'Enter') onOk(); else if (e.key === 'Escape') onCancel(); };
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+function showConfirm(title) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const input = document.getElementById('modal-input');
+    const ok = document.getElementById('modal-ok');
+    const cancel = document.getElementById('modal-cancel');
+    input.style.display = 'none';
+    ok.className = 'btn-modal-danger';
+    titleEl.textContent = title;
+    overlay.classList.add('visible');
+    const finish = (val) => {
+      overlay.classList.remove('visible');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      resolve(val);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+  });
+}
+
+function showTypePicker() {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const input = document.getElementById('modal-input');
+    const ok = document.getElementById('modal-ok');
+    const cancel = document.getElementById('modal-cancel');
+    input.style.display = 'none';
+    titleEl.textContent = 'Formato do tópico:';
+    ok.className = 'btn-modal-ok';
+    ok.textContent = 'HTML';
+    cancel.className = 'btn-modal-cancel';
+    cancel.textContent = 'Markdown';
+    overlay.classList.add('visible');
+    const finish = (val) => {
+      overlay.classList.remove('visible');
+      ok.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      ok.textContent = 'OK';
+      cancel.textContent = 'Cancelar';
+      resolve(val);
+    };
+    const onOk = () => finish('html');
+    const onCancel = () => finish('md');
+    ok.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+  });
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function slugToDisplay(slug) {
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function extractTitle(text, slug, type) {
+  if (type === 'html') {
+    const m = text.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    return m ? m[1].trim() : slugToDisplay(slug);
+  }
+  const m = text.match(/^#\s+(.+)$/m);
+  return m ? m[1].trim() : slugToDisplay(slug);
+}
+
+function sanitizeHtml(html, basePath) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  div.querySelectorAll('style').forEach(el => el.remove());
+  div.querySelectorAll('[style]').forEach(el => {
+    const cleaned = el.getAttribute('style')
+      .replace(/\bcolor\s*:[^;]+;?/gi, '')
+      .replace(/\bbackground(-color)?\s*:[^;]+;?/gi, '');
+    cleaned.trim() ? el.setAttribute('style', cleaned) : el.removeAttribute('style');
+  });
+  if (basePath) {
+    div.querySelectorAll('img[src]').forEach(img => {
+      const src = img.getAttribute('src');
+      if (!src.startsWith('http') && !src.startsWith('/') && !src.startsWith('data:')) {
+        img.setAttribute('src', basePath + src);
+      }
+    });
+  }
+  return div.innerHTML;
+}
+
+function toSlug(name) {
+  return name.trim().toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-_]/g, '');
+}
+
+// ── API ───────────────────────────────────────────────
+function wikiParam() {
+  return activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
+}
+
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(path, { cache: 'no-store', ...opts });
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    throw new Error(d.error || res.statusText);
+  }
+  return res.json();
+}
+
+async function uploadImage(file, catSlug) {
+  const filename = file.name || `paste-${Date.now()}.png`;
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const wikiQ = activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
+  const res = await fetch(
+    `/api/image?cat=${encodeURIComponent(catSlug)}&filename=${encodeURIComponent(safe)}${wikiQ}`,
+    { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file }
+  );
+  if (!res.ok) throw new Error('upload failed');
+  return (await res.json()).url;
+}
+
+// ── INIT ──────────────────────────────────────────────
+const isAdmin = new URLSearchParams(window.location.search).has('admin');
+if (!isAdmin) document.body.classList.add('viewer');
+
+async function init() {
+  try {
+    const data = await apiFetch('/api/topics');
+    document.getElementById('first-run').style.display = 'none';
+    if (data.mode === 'hub') {
+      hubMode = true;
+      showHub(data.wikis);
+    } else {
+      hubMode = false;
+      categories = data.categories;
+      document.getElementById('btn-back').style.display = 'none';
+      showMainView();
+    }
+  } catch (e) {
+    document.getElementById('first-run').innerHTML =
+      `<div class="logo-icon">!</div><h1>Erro</h1><p>Não foi possível ligar ao servidor.<br><code style="font-size:12px">${e.message}</code></p>`;
+  }
+}
+
+async function enterWiki(wikiName, wikiDisplay) {
+  try {
+    const data = await apiFetch('/api/topics?wiki=' + encodeURIComponent(wikiName));
+    activeWiki = wikiName;
+    categories = data.categories;
+    document.getElementById('wiki-name').textContent = wikiDisplay;
+    document.getElementById('wiki-label').textContent = 'wiki';
+    document.getElementById('hub').classList.remove('visible');
+    document.getElementById('btn-back').style.display = 'flex';
+    const wasHubUnlocked = !hubLocked;
+    hubLocked = true;
+    document.body.classList.remove('hub-unlocked');
+    document.getElementById('btn-hub-lock').classList.add('locked');
+    document.getElementById('btn-hub-lock').textContent = '⊘ unlock';
+    if (wasHubUnlocked) {
+      locked = false;
+      document.body.classList.add('unlocked');
+      const btnLock = document.getElementById('btn-lock');
+      btnLock.classList.remove('locked');
+      btnLock.textContent = '⊙ lock';
+    }
+    showMainView();
+  } catch (e) {
+    alert('Erro ao abrir wiki: ' + e.message);
+  }
+}
+
+async function backToHub() {
+  locked = true;
+  currentTopic = null;
+  activeWiki = null;
+  document.body.classList.remove('unlocked');
+  const btnLock = document.getElementById('btn-lock');
+  btnLock.classList.add('locked');
+  btnLock.textContent = '⊘ unlock';
+
+  document.getElementById('sidebar').classList.remove('visible');
+  document.getElementById('main').classList.remove('visible');
+
+  const data = await apiFetch('/api/topics');
+  showHub(data.wikis);
+}
+
+function showHub(wikis) {
+  document.getElementById('sidebar').classList.remove('visible');
+  document.getElementById('main').classList.remove('visible');
+  document.getElementById('btn-back').style.display = 'none';
+
+  const grid = document.getElementById('hub-grid');
+  grid.innerHTML = '';
+  wikis.forEach(w => {
+    const card = document.createElement('div');
+    card.className = 'hub-card';
+    card.innerHTML = `
+      <div class="hub-card-icon">◈</div>
+      <div class="hub-card-name">${w.display}</div>
+      <div class="hub-card-meta">${w.catCount} categoria${w.catCount !== 1 ? 's' : ''}</div>`;
+    card.addEventListener('click', () => enterWiki(w.name, w.display));
+    grid.appendChild(card);
+  });
+  const addCard = document.createElement('div');
+  addCard.className = 'hub-card hub-card-add';
+  addCard.textContent = '＋ new wiki';
+  addCard.addEventListener('click', addWiki);
+  grid.appendChild(addCard);
+
+  document.getElementById('hub').classList.add('visible');
+}
+
+// ── VIEW TRANSITIONS ──────────────────────────────────
+function showMainView() {
+  document.getElementById('sidebar').classList.add('visible');
+  document.getElementById('main').classList.add('visible');
+  buildSidebar();
+  buildWelcome();
+  setupSearch();
+}
+
+function buildSidebar() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = '';
+
+  categories.forEach((cat, catIdx) => {
+    const section = document.createElement('div');
+    section.className = 'nav-category';
+    section.dataset.catSlug = cat.slug;
+
+    const hdr = document.createElement('div');
+    hdr.className = 'nav-category-header';
+    hdr.innerHTML = `<span class="cat-icon">◈</span>${cat.display}<span class="chevron">▾</span>`;
+    hdr.addEventListener('click', () => section.classList.toggle('collapsed'));
+    section.appendChild(hdr);
+
+    const items = document.createElement('div');
+    items.className = 'nav-items';
+
+    cat.topics.forEach(topic => {
+      const item = document.createElement('div');
+      item.className = 'nav-item';
+      item.dataset.catSlug = cat.slug;
+      item.dataset.topicSlug = topic.slug;
+      const dot = document.createElement('span');
+      dot.className = 'nav-dot';
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(topic.title));
+      item.addEventListener('click', () => loadTopic({ catSlug: cat.slug, slug: topic.slug, title: topic.title, type: topic.type }));
+      items.appendChild(item);
+    });
+
+    const addBtn = document.createElement('div');
+    addBtn.className = 'nav-add-topic';
+    addBtn.textContent = '+ novo tópico';
+    addBtn.addEventListener('click', e => { e.stopPropagation(); addTopic(catIdx); });
+    items.appendChild(addBtn);
+
+    section.appendChild(items);
+    nav.appendChild(section);
+  });
+
+  const addCatBtn = document.createElement('div');
+  addCatBtn.className = 'nav-add-category';
+  addCatBtn.textContent = '+ nova categoria';
+  addCatBtn.addEventListener('click', addCategory);
+  nav.appendChild(addCatBtn);
+}
+
+function updateNavActive() {
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active',
+      currentTopic &&
+      el.dataset.catSlug === currentTopic.catSlug &&
+      el.dataset.topicSlug === currentTopic.slug
+    );
+  });
+}
+
+function buildWelcome() {
+  if (window.innerWidth <= 640) {
+    document.getElementById('sidebar').classList.add('visible');
+  }
+  const contentArea = document.getElementById('content-area');
+  contentArea.innerHTML = '';
+
+  const el = document.createElement('div');
+  el.id = 'welcome';
+  el.innerHTML = `
+    <h1>Wiki<br><span>Dev Notes</span></h1>
+    <p>Clica num tópico na sidebar ou escolhe uma categoria.</p>
+    <div class="welcome-grid" id="welcome-grid"></div>`;
+  contentArea.appendChild(el);
+
+  const grid = document.getElementById('welcome-grid');
+  categories.forEach(cat => {
+    const card = document.createElement('div');
+    card.className = 'welcome-card';
+    card.innerHTML = `
+      <div class="wc-icon">◈</div>
+      <div class="wc-title">${cat.display}</div>
+      <div class="wc-count">${cat.topics.length} tópico${cat.topics.length !== 1 ? 's' : ''}</div>`;
+    if (cat.topics.length > 0) {
+      card.addEventListener('click', () => loadTopic({
+        catSlug: cat.slug,
+        slug: cat.topics[0].slug,
+        title: cat.topics[0].title,
+        type: cat.topics[0].type
+      }));
+    }
+    grid.appendChild(card);
+  });
+
+  document.getElementById('breadcrumb-cat').textContent = '—';
+  document.getElementById('breadcrumb-title').textContent = 'início';
+  document.getElementById('btn-delete').classList.remove('visible');
+  currentTopic = null;
+  updateNavActive();
+}
+
+function setupSearch() {
+  const input = document.getElementById('search');
+  input.value = '';
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    let anyVisible = false;
+
+    document.querySelectorAll('.nav-item').forEach(el => {
+      const match = !q || el.textContent.toLowerCase().includes(q);
+      el.style.display = match ? '' : 'none';
+      if (match) anyVisible = true;
+    });
+
+    document.querySelectorAll('.nav-category').forEach(cat => {
+      if (q) cat.classList.remove('collapsed');
+      const hasVisible = [...cat.querySelectorAll('.nav-item')]
+        .some(el => el.style.display !== 'none');
+      cat.style.display = hasVisible ? '' : 'none';
+    });
+
+    document.getElementById('no-results').style.display = anyVisible ? 'none' : 'block';
+  });
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
+
+function addCopyButtons(container) {
+  container.querySelectorAll('pre').forEach(pre => {
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'copiar';
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const codeEl = pre.querySelector('code');
+      const text = codeEl ? codeEl.innerText : pre.innerText;
+      const confirm = () => {
+        btn.textContent = '✓ copiado';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copiar'; btn.classList.remove('copied'); }, 2000);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(confirm).catch(() => {
+          fallbackCopy(text);
+          confirm();
+        });
+      } else {
+        fallbackCopy(text);
+        confirm();
+      }
+    });
+    pre.appendChild(btn);
+  });
+}
+
+function scrollToCurrentCat() {
+  if (!currentTopic) return;
+  const section = document.querySelector(`[data-cat-slug="${currentTopic.catSlug}"]`);
+  if (section) {
+    if (window.innerWidth <= 640) document.getElementById('sidebar').classList.add('visible');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+async function loadTopic(topic) {
+  document.body.classList.remove('editing');
+  currentTopic = topic;
+  updateNavActive();
+  if (window.innerWidth <= 640) {
+    document.getElementById('sidebar').classList.remove('visible');
+  }
+
+  document.getElementById('breadcrumb-cat').textContent = slugToDisplay(topic.catSlug);
+  document.getElementById('breadcrumb-title').textContent = topic.title;
+  document.getElementById('btn-delete').classList.toggle('visible', true);
+
+  try {
+    const data = await apiFetch(
+      `/api/topic?cat=${encodeURIComponent(topic.catSlug)}&slug=${encodeURIComponent(topic.slug)}${wikiParam()}`
+    );
+    currentTopic.type = data.type || currentTopic.type || 'md';
+    const basePath = activeWiki
+      ? `/${activeWiki}/topics/${topic.catSlug}/`
+      : `/topics/${topic.catSlug}/`;
+    const rendered = currentTopic.type === 'html' ? sanitizeHtml(data.content, basePath) : parseMarkdown(data.content);
+    const area = document.getElementById('content-area');
+    area.innerHTML = `<div class="topic-page">${rendered}</div>`;
+    area.scrollTop = 0;
+    addCopyButtons(area);
+
+    if (!locked) {
+      area.querySelector('.topic-page').addEventListener('click', () => openEditor(data.content, currentTopic.type));
+    }
+  } catch (e) {
+    document.getElementById('content-area').innerHTML =
+      `<div class="topic-page"><h1>${topic.title}</h1><p style="color:var(--text3)">Erro ao carregar tópico.</p></div>`;
+  }
+}
+
+function parseMarkdown(md) {
+  const codeBlocks = [];
+
+  let html = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // extract fenced code blocks before any other transformation
+  html = html.replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre><code>${code.trimEnd()}</code></pre>`);
+    return `\x00CODE${idx}\x00`;
+  });
+
+  // inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // headings
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm,  '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm,   '<h1>$1</h1>');
+
+  // bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // images ![alt](url)
+  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) =>
+    `<img src="${url}" alt="${alt}" class="md-img">`);
+
+  // links [text](url)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) =>
+    `<a href="${url}" target="_blank" rel="noopener noreferrer">${text}</a>`);
+
+  // callouts (uses &gt; because HTML was already escaped)
+  html = html.replace(/^&gt;! (.+)$/gm, '<div class="callout warn">$1</div>');
+  html = html.replace(/^&gt; (.+)$/gm,  '<div class="callout">$1</div>');
+
+  // unordered lists
+  html = html.replace(/((?:^- .+\n?)+)/gm, block => {
+    const items = block.trim().split('\n')
+      .map(l => `<li>${l.replace(/^- /, '')}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+
+  // ordered lists
+  html = html.replace(/((?:^\d+\. .+\n?)+)/gm, block => {
+    const items = block.trim().split('\n')
+      .map(l => `<li>${l.replace(/^\d+\. /, '')}</li>`).join('');
+    return `<ol>${items}</ol>`;
+  });
+
+  // paragraphs
+  html = html.split('\n\n').map(block => {
+    block = block.trim();
+    if (!block) return '';
+    if (/^<(h[1-3]|ul|ol|pre|div|img)/.test(block)) return block;
+    if (/^\x00CODE\d+\x00$/.test(block)) return block;
+    return `<p>${block.replace(/\n/g, ' ')}</p>`;
+  }).join('\n');
+
+  // restore code blocks
+  html = html.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[+i]);
+
+  return html;
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('visible');
+}
+
+function toggleLock() {
+  locked = !locked;
+  const btn = document.getElementById('btn-lock');
+  document.body.classList.toggle('unlocked', !locked);
+  btn.classList.toggle('locked', locked);
+  btn.textContent = locked ? '⊘ unlock' : '⊙ lock';
+  if (currentTopic) loadTopic(currentTopic);
+}
+
+let hubLocked = true;
+function toggleHubLock() {
+  hubLocked = !hubLocked;
+  const btn = document.getElementById('btn-hub-lock');
+  document.body.classList.toggle('hub-unlocked', !hubLocked);
+  btn.classList.toggle('locked', hubLocked);
+  btn.textContent = hubLocked ? '⊘ unlock' : '⊙ lock';
+}
+
+async function addWiki() {
+  const name = await showPrompt('Nome da nova wiki:', 'ex: minha-wiki');
+  if (!name) return;
+  try {
+    await apiFetch('/api/wiki', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim() })
+    });
+    const data = await apiFetch('/api/topics');
+    showHub(data.wikis);
+  } catch (e) {
+    alert('Erro ao criar wiki: ' + e.message);
+  }
+}
+
+function setSaveStatus(cls, text) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status' + (cls ? ' ' + cls : '');
+  el.textContent = text;
+}
+
+function buildWysiwygToolbar(wysiwyg, catSlug) {
+  const bar = document.createElement('div');
+  bar.className = 'wysiwyg-toolbar';
+
+  const btn = (html, cmd, val) => {
+    const b = document.createElement('button');
+    b.className = 'wysiwyg-btn';
+    b.innerHTML = html;
+    b.addEventListener('mousedown', e => {
+      e.preventDefault();
+      wysiwyg.focus();
+      document.execCommand(cmd, false, val || null);
+    });
+    return b;
+  };
+
+  const sep = () => { const s = document.createElement('div'); s.className = 'wysiwyg-sep'; return s; };
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.style.display = 'none';
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    fileInput.value = '';
+    try {
+      const url = await uploadImage(file, catSlug);
+      wysiwyg.focus();
+      document.execCommand('insertImage', false, url);
+    } catch (e) { alert('Erro ao carregar imagem: ' + e.message); }
+  });
+  bar.appendChild(fileInput);
+
+  const imgBtn = document.createElement('button');
+  imgBtn.className = 'wysiwyg-btn';
+  imgBtn.textContent = 'IMG';
+  imgBtn.addEventListener('mousedown', e => { e.preventDefault(); fileInput.click(); });
+
+  const linkBtn = document.createElement('button');
+  linkBtn.className = 'wysiwyg-btn';
+  linkBtn.textContent = 'Link';
+  linkBtn.addEventListener('mousedown', async e => {
+    e.preventDefault();
+    const sel = window.getSelection();
+    const range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    const url = await showPrompt('URL:', 'https://');
+    if (!url) return;
+    wysiwyg.focus();
+    if (range) { sel.removeAllRanges(); sel.addRange(range); }
+    document.execCommand('createLink', false, url);
+  });
+
+  bar.append(
+    btn('<b>B</b>', 'bold'), btn('<i>I</i>', 'italic'), btn('<u>U</u>', 'underline'),
+    sep(),
+    btn('H1', 'formatBlock', 'h1'), btn('H2', 'formatBlock', 'h2'), btn('H3', 'formatBlock', 'h3'), btn('P', 'formatBlock', 'p'),
+    sep(),
+    btn('UL', 'insertUnorderedList'), btn('OL', 'insertOrderedList'),
+    sep(),
+    imgBtn, linkBtn,
+    sep(),
+    btn('✕', 'removeFormat')
+  );
+  return bar;
+}
+
+function openEditor(rawContent, type) {
+  if (locked) return;
+  const area = document.getElementById('content-area');
+  const editorBasePath = activeWiki
+    ? `/${activeWiki}/topics/${currentTopic.catSlug}/`
+    : `/topics/${currentTopic.catSlug}/`;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'editor-wrap';
+
+  const actions = document.createElement('div');
+  actions.className = 'editor-actions';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn-save-topic';
+  saveBtn.textContent = '✓ Guardar';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn-cancel-edit';
+  cancelBtn.textContent = 'Cancelar';
+  cancelBtn.addEventListener('click', () => loadTopic(currentTopic));
+
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  wrap.appendChild(actions);
+
+  let focusTarget;
+
+  if (type === 'html') {
+    const wysiwyg = document.createElement('div');
+    wysiwyg.className = 'editor-preview';
+    wysiwyg.contentEditable = 'true';
+    wysiwyg.spellcheck = false;
+    wysiwyg.innerHTML = sanitizeHtml(rawContent, editorBasePath);
+    wrap.appendChild(buildWysiwygToolbar(wysiwyg, currentTopic.catSlug));
+    wrap.appendChild(wysiwyg);
+
+    // ── image resize overlay ──────────────────────────────
+    const overlay = document.createElement('div');
+    overlay.className = 'img-select-overlay';
+    for (const pos of ['nw', 'ne', 'sw', 'se']) {
+      const h = document.createElement('div');
+      h.className = `img-resize-handle ${pos}`;
+      overlay.appendChild(h);
+    }
+    wrap.appendChild(overlay);
+
+    let selectedImg = null;
+
+    const positionOverlay = () => {
+      if (!selectedImg) return;
+      const wRect = wrap.getBoundingClientRect();
+      const iRect = selectedImg.getBoundingClientRect();
+      overlay.style.left   = (iRect.left   - wRect.left) + 'px';
+      overlay.style.top    = (iRect.top    - wRect.top)  + 'px';
+      overlay.style.width  = iRect.width  + 'px';
+      overlay.style.height = iRect.height + 'px';
+    };
+
+    wysiwyg.addEventListener('click', e => {
+      if (e.target.tagName === 'IMG') {
+        selectedImg = e.target;
+        overlay.classList.add('active');
+        positionOverlay();
+      } else {
+        selectedImg = null;
+        overlay.classList.remove('active');
+      }
+    });
+
+    wysiwyg.addEventListener('scroll', positionOverlay);
+
+    overlay.querySelectorAll('.img-resize-handle').forEach(handle => {
+      handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startX    = e.clientX;
+        const startW    = selectedImg.getBoundingClientRect().width;
+        const isLeft    = handle.classList.contains('nw') || handle.classList.contains('sw');
+
+        const onMove = e => {
+          const dx = e.clientX - startX;
+          const newW = Math.max(40, isLeft ? startW - dx : startW + dx);
+          selectedImg.style.width  = newW + 'px';
+          selectedImg.style.height = 'auto';
+          positionOverlay();
+        };
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      });
+    });
+
+    focusTarget = wysiwyg;
+
+    wysiwyg.addEventListener('paste', async e => {
+      const items = [...(e.clipboardData?.items || [])];
+      const imgItem = items.find(i => i.type.startsWith('image/'));
+      if (!imgItem) return;
+      e.preventDefault();
+      const file = new File([imgItem.getAsFile()], `paste-${Date.now()}.png`, { type: imgItem.type });
+      try {
+        const url = await uploadImage(file, currentTopic.catSlug);
+        document.execCommand('insertImage', false, url);
+      } catch (err) { alert('Erro ao colar imagem: ' + err.message); }
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const clone = wysiwyg.cloneNode(true);
+      clone.querySelectorAll('img[src]').forEach(img => {
+        const src = img.getAttribute('src');
+        if (src.startsWith(editorBasePath)) img.setAttribute('src', src.slice(editorBasePath.length));
+      });
+      saveTopic(clone.innerHTML, type);
+    });
+  } else {
+    const ta = document.createElement('textarea');
+    ta.className = 'editor-textarea';
+    ta.spellcheck = false;
+    ta.autocomplete = 'off';
+    ta.setAttribute('autocorrect', 'off');
+    ta.setAttribute('autocapitalize', 'off');
+    ta.value = rawContent;
+    requestAnimationFrame(() => { ta.scrollTop = 0; ta.setSelectionRange(0, 0); });
+    focusTarget = ta;
+
+    const preview = document.createElement('div');
+    preview.className = 'editor-preview content';
+    preview.innerHTML = parseMarkdown(rawContent);
+    ta.addEventListener('input', () => { preview.innerHTML = parseMarkdown(ta.value); });
+
+    const panes = document.createElement('div');
+    panes.className = 'editor-panes';
+    panes.appendChild(ta);
+    panes.appendChild(preview);
+    wrap.appendChild(panes);
+
+    saveBtn.addEventListener('click', () => saveTopic(ta.value, type));
+  }
+
+  document.body.classList.add('editing');
+  area.innerHTML = '';
+  area.appendChild(wrap);
+  focusTarget.focus();
+}
+
+async function saveTopic(rawMd, type) {
+  if (!currentTopic) return;
+  setSaveStatus('saving', 'a guardar…');
+  try {
+    await apiFetch(
+      `/api/topic?cat=${encodeURIComponent(currentTopic.catSlug)}&slug=${encodeURIComponent(currentTopic.slug)}${wikiParam()}`,
+      { method: 'PUT', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: rawMd }
+    );
+    const cat = categories.find(c => c.slug === currentTopic.catSlug);
+    if (cat) {
+      const t = cat.topics.find(t => t.slug === currentTopic.slug);
+      if (t) { t.title = extractTitle(rawMd, currentTopic.slug, type); currentTopic.title = t.title; }
+    }
+    currentTopic.type = type || currentTopic.type || 'md';
+    buildSidebar();
+    setSaveStatus('saved', '✓ guardado');
+    setTimeout(() => setSaveStatus('', ''), 2500);
+    await loadTopic(currentTopic);
+  } catch (e) {
+    setSaveStatus('error', '✕ erro');
+  }
+}
+
+async function addTopic(catIdx) {
+  const cat = categories[catIdx];
+  if (!cat) return;
+  const name = await showPrompt(`Novo tópico em "${cat.display}":`, 'ex: meu topico');
+  if (!name) return;
+  const type = await showTypePicker();
+
+  try {
+    const data = await apiFetch('/api/topic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wiki: activeWiki, cat: cat.slug, name: name.trim(), type })
+    });
+    const newTopic = { slug: data.slug, title: data.title, type: data.type };
+    cat.topics.push(newTopic);
+    cat.topics.sort((a, b) => a.slug.localeCompare(b.slug));
+    buildSidebar();
+    buildWelcome();
+    await loadTopic({ catSlug: cat.slug, slug: data.slug, title: data.title, type });
+    openEditor(data.content, type);
+  } catch (e) {
+    alert('Erro ao criar tópico: ' + e.message);
+  }
+}
+
+async function addCategory() {
+  const name = await showPrompt('Nome da nova categoria:', 'ex: minha-categoria');
+  if (!name) return;
+
+  try {
+    const data = await apiFetch('/api/category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wiki: activeWiki, name: name.trim() })
+    });
+    categories.push({ slug: data.slug, display: data.display, topics: [] });
+    categories.sort((a, b) => a.slug.localeCompare(b.slug));
+    buildSidebar();
+    buildWelcome();
+  } catch (e) {
+    alert('Erro ao criar categoria: ' + e.message);
+  }
+}
+
+async function deleteCurrentTopic() {
+  if (!currentTopic) return;
+  const confirmed = await showConfirm(`Apagar "${currentTopic.title}"? Esta acção é irreversível.`);
+  if (!confirmed) return;
+
+  try {
+    await apiFetch(
+      `/api/topic?cat=${encodeURIComponent(currentTopic.catSlug)}&slug=${encodeURIComponent(currentTopic.slug)}${wikiParam()}`,
+      { method: 'DELETE' }
+    );
+    const cat = categories.find(c => c.slug === currentTopic.catSlug);
+    if (cat) cat.topics = cat.topics.filter(t => t.slug !== currentTopic.slug);
+    currentTopic = null;
+    buildSidebar();
+    buildWelcome();
+  } catch (e) {
+    alert('Erro ao apagar: ' + e.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
