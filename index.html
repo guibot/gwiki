@@ -489,6 +489,24 @@ function toSlug(name) {
     .replace(/[^a-z0-9\-_]/g, '');
 }
 
+// ── HASH / DEEP-LINK ──────────────────────────────────
+function readHash() {
+  const raw = location.hash.slice(1);
+  if (!raw) return {};
+  try {
+    const p = new URLSearchParams(raw);
+    return { wiki: p.get('wiki'), cat: p.get('cat'), slug: p.get('slug') };
+  } catch { return {}; }
+}
+
+function updateHash({ wiki, cat, slug } = {}) {
+  const parts = [];
+  if (wiki) parts.push('wiki=' + encodeURIComponent(wiki));
+  if (cat)  parts.push('cat='  + encodeURIComponent(cat));
+  if (slug) parts.push('slug=' + encodeURIComponent(slug));
+  history.replaceState(null, '', parts.length ? '#' + parts.join('&') : location.pathname + location.search);
+}
+
 // ── API ───────────────────────────────────────────────
 function wikiParam() {
   return activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
@@ -532,6 +550,7 @@ async function init() {
       document.getElementById('btn-back').style.display = 'none';
       showMainView();
     }
+    await tryHashNav();
   } catch (e) {
     document.getElementById('first-run').innerHTML =
       `<div class="logo-icon">!</div><h1>Erro</h1><p>Não foi possível ligar ao servidor.<br><code style="font-size:12px">${e.message}</code></p>`;
@@ -559,6 +578,7 @@ async function enterWiki(wikiName, wikiDisplay) {
       btnLock.classList.remove('locked');
       btnLock.textContent = '⊙ lock';
     }
+    updateHash({ wiki: wikiName });
     showMainView();
   } catch (e) {
     alert('Erro ao abrir wiki: ' + e.message);
@@ -577,8 +597,44 @@ async function backToHub() {
   document.getElementById('sidebar').classList.remove('visible');
   document.getElementById('main').classList.remove('visible');
 
+  updateHash();
   const data = await apiFetch('/api/topics');
   showHub(data.wikis);
+}
+
+async function tryHashNav() {
+  const { wiki, cat, slug } = readHash();
+  if (!wiki && !cat) return;
+  try {
+    if (hubMode && wiki && !activeWiki) {
+      const wikiData = await apiFetch('/api/topics?wiki=' + encodeURIComponent(wiki));
+      activeWiki = wiki;
+      categories = wikiData.categories;
+      document.getElementById('wiki-name').textContent = slugToDisplay(wiki);
+      document.getElementById('wiki-label').textContent = 'wiki';
+      document.getElementById('hub').classList.remove('visible');
+      document.getElementById('btn-back').style.display = 'flex';
+      hubLocked = true;
+      document.body.classList.remove('hub-unlocked');
+      document.getElementById('btn-hub-lock').classList.add('locked');
+      document.getElementById('btn-hub-lock').textContent = '⊘ unlock';
+      showMainView();
+    }
+    if (!cat) return; // wiki-only hash: welcome view of that wiki is enough
+    const catObj = categories.find(c => c.slug === cat);
+    if (!catObj) return;
+    if (slug) {
+      const topicObj = catObj.topics.find(t => t.slug === slug);
+      if (topicObj) await loadTopic({ catSlug: cat, slug, title: topicObj.title });
+    } else {
+      updateHash({ wiki: activeWiki, cat });
+      const section = document.querySelector(`.nav-category[data-cat-slug="${CSS.escape(cat)}"]`);
+      if (section) {
+        section.classList.remove('collapsed');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  } catch { /* fail silently — show normal view */ }
 }
 
 function showHub(wikis) {
@@ -708,6 +764,7 @@ function buildWelcome() {
     grid.appendChild(card);
   });
 
+  updateHash(activeWiki ? { wiki: activeWiki } : {});
   document.getElementById('breadcrumb-cat').textContent = '—';
   document.getElementById('breadcrumb-title').textContent = 'início';
   document.getElementById('btn-delete').classList.remove('visible');
@@ -789,6 +846,7 @@ function scrollToCurrentCat() {
 async function loadTopic(topic) {
   document.body.classList.remove('editing');
   currentTopic = topic;
+  updateHash({ wiki: activeWiki, cat: topic.catSlug, slug: topic.slug });
   updateNavActive();
   if (window.innerWidth <= 640) {
     document.getElementById('sidebar').classList.remove('visible');
