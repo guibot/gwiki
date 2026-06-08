@@ -10,6 +10,12 @@ A quick reference for what the wiki parser supports.
 ### H3
 ```
 
+# texto com #
+
+## texto com ##
+
+### texto com ###
+
 ## Text
 
 **Bold text** with `**double asterisks**`.
@@ -28,7 +34,7 @@ Ordered:
 2. Second
 3. Third
 
-## Code blocks
+## Code blocks with ''' backticks
 
 ```python
 def hello():

@@ -1,0 +1,3 @@
+sudo systemctl daemon-reload
+sudo systemctl restart gwiki
+sudo systemctl status gwiki

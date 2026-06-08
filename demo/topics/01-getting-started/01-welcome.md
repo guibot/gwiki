@@ -1,5 +1,7 @@
 # Welcome to the Wiki
 
+![alt text](demo/topics/01-getting-started/img2.png)
+
 This is a demo topic. Replace this content with your own notes.
 
 The wiki auto-detects the structure from the filesystem — no configuration needed.
