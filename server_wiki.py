@@ -3,8 +3,11 @@
 Wiki HTTP server — stdlib only.
 Configure WIKI_PATH below, then: python3 server.py
 """
+import hashlib
+import hmac
 import json
 import re
+import secrets
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -201,6 +204,20 @@ class WikiHandler(BaseHTTPRequestHandler):
             self.send_json({"content": file_path.read_text(encoding="utf-8"), "type": ftype})
             return
 
+        if path == "/api/auth":
+            bfly = self.root / ".butterfly"
+            token = qs.get("token", [None])[0]
+            if token:
+                if not bfly.exists():
+                    self.send_json({"ok": False})
+                    return
+                _, stored = bfly.read_text().strip().split(":", 1)
+                expected = hmac.new(stored.encode(), b"gwiki-admin", hashlib.sha256).hexdigest()
+                self.send_json({"ok": token == expected})
+                return
+            self.send_json({"setup": not bfly.exists()})
+            return
+
         file_path = safe_path(self.root, path.lstrip("/"))
         if file_path and file_path.exists() and file_path.is_file():
             self.send_file(file_path)
@@ -240,6 +257,24 @@ class WikiHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": True})
             return
 
+        if parsed.path == "/api/description":
+            wiki = qs.get("wiki", [None])[0]
+            if is_hub_mode(self.root):
+                if not wiki:
+                    self.send_json({"error": "missing wiki"}, 400)
+                    return
+                target_dir = safe_path(self.root, wiki)
+                if not target_dir or not target_dir.exists():
+                    self.send_json({"error": "wiki not found"}, 404)
+                    return
+            else:
+                target_dir = self.root
+            raw = self.read_body()
+            content = raw.decode("utf-8").strip()
+            (target_dir / "description.txt").write_text(content, encoding="utf-8")
+            self.send_json({"ok": True})
+            return
+
         self.send_json({"error": "not found"}, 404)
 
     def do_POST(self):
@@ -250,27 +285,69 @@ class WikiHandler(BaseHTTPRequestHandler):
             cat = qs.get("cat", [None])[0]
             filename = qs.get("filename", [None])[0]
             wiki = qs.get("wiki", [None])[0]
-            if not cat or not filename:
-                self.send_json({"error": "missing cat or filename"}, 400)
-                return
-            topics_dir = resolve_topics_dir(self.root, wiki)
-            if not topics_dir:
-                self.send_json({"error": "wiki not found"}, 404)
-                return
-            cat_dir = safe_path(topics_dir, cat)
-            if not cat_dir or not cat_dir.exists():
-                self.send_json({"error": "category not found"}, 404)
+            if not filename:
+                self.send_json({"error": "missing filename"}, 400)
                 return
             safe_name = re.sub(r"[^a-zA-Z0-9._-]", "_", filename)
-            images_dir = cat_dir / "images"
-            images_dir.mkdir(exist_ok=True)
             raw = self.read_body()
             if not raw:
                 self.send_json({"error": "empty body"}, 400)
                 return
-            (images_dir / safe_name).write_bytes(raw)
-            prefix = f"/{wiki}/topics/{cat}" if wiki else f"/topics/{cat}"
-            self.send_json({"url": f"{prefix}/images/{safe_name}"})
+
+            if cat:
+                topics_dir = resolve_topics_dir(self.root, wiki)
+                if not topics_dir:
+                    self.send_json({"error": "wiki not found"}, 404)
+                    return
+                cat_dir = safe_path(topics_dir, cat)
+                if not cat_dir or not cat_dir.exists():
+                    self.send_json({"error": "category not found"}, 404)
+                    return
+                images_dir = cat_dir / "images"
+                images_dir.mkdir(exist_ok=True)
+                (images_dir / safe_name).write_bytes(raw)
+                prefix = f"/{wiki}/topics/{cat}" if wiki else f"/topics/{cat}"
+                self.send_json({"url": f"{prefix}/images/{safe_name}"})
+                return
+
+            # No category — store at wiki root, or server root if no wiki given
+            if is_hub_mode(self.root) and wiki:
+                target_dir = safe_path(self.root, wiki)
+                if not target_dir or not target_dir.exists():
+                    self.send_json({"error": "wiki not found"}, 404)
+                    return
+                prefix = f"/{wiki}"
+            else:
+                target_dir = self.root
+                prefix = ""
+            (target_dir / safe_name).write_bytes(raw)
+            self.send_json({"url": f"{prefix}/{safe_name}"})
+            return
+
+        if parsed.path == "/api/auth":
+            length = int(self.headers.get("Content-Length", 0))
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+            except Exception:
+                self.send_json({"error": "invalid JSON body"}, 400)
+                return
+            password = body.get("password", "")
+            if not password:
+                self.send_json({"error": "missing password"}, 400)
+                return
+            bfly = self.root / ".butterfly"
+            if not bfly.exists():
+                salt = secrets.token_hex(16)
+                h = hashlib.sha256((salt + password).encode()).hexdigest()
+                bfly.write_text(f"{salt}:{h}")
+            else:
+                salt, stored = bfly.read_text().strip().split(":", 1)
+                h = hashlib.sha256((salt + password).encode()).hexdigest()
+                if h != stored:
+                    self.send_json({"error": "wrong password"}, 401)
+                    return
+            token = hmac.new(h.encode(), b"gwiki-admin", hashlib.sha256).hexdigest()
+            self.send_json({"ok": True, "token": token})
             return
 
         length = int(self.headers.get("Content-Length", 0))

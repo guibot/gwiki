@@ -144,9 +144,26 @@
 
     /* ── WELCOME ── */
     #welcome { padding: 60px 0 0; }
-    #welcome h1 { font-size: 40px; font-weight: 800; color: #fff; line-height: 1.05; margin-bottom: 14px; }
-    #welcome h1 span { color: var(--accent); }
-    #welcome p { font-size: 15px; color: var(--text2); line-height: 1.75; max-width: 540px; margin-bottom: 36px; }
+    .wiki-hero { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 36px; }
+    .wiki-hero h1 { font-size: 32px; font-weight: 800; color: #fff; line-height: 1.05; margin: 0; }
+    .hero-text { display: flex; flex-direction: column; gap: 6px; }
+    .hero-desc { font-size: 14px; color: var(--text2); margin: 0; }
+    .hero-desc.empty { display: none; color: var(--text3); font-style: italic; }
+    body.unlocked .hero-desc { cursor: pointer; }
+    body.unlocked .hero-desc:hover { color: var(--text); }
+    body.unlocked .hero-desc.empty { display: block; }
+    .hero-cover { position: relative; width: 76px; height: 76px; border-radius: 16px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); flex-shrink: 0; }
+    .hero-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hero-cover.empty img { display: none; }
+    .hero-cover.empty { display: none; }
+    .hero-cover-plus { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; font-size: 26px; color: var(--text3); }
+    body.unlocked .hero-cover { cursor: pointer; }
+    body.unlocked .hero-cover:hover { border-color: var(--border2); background: var(--surface2); }
+    body.unlocked .hero-cover.empty { display: block; }
+    body.unlocked .hero-cover.empty .hero-cover-plus { display: flex; }
+    .hero-cover-handle { position: absolute; bottom: 3px; right: 3px; width: 8px; height: 8px; background: var(--accent); border-radius: 2px; cursor: se-resize; display: none; z-index: 2; }
+    body.unlocked .hero-cover:hover .hero-cover-handle,
+    body.unlocked .hero-cover-handle.dragging { display: block; }
     .welcome-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
     .welcome-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; cursor: pointer; transition: all 0.15s; }
     .welcome-card:hover { border-color: var(--border2); background: var(--surface2); transform: translateY(-1px); }
@@ -237,16 +254,44 @@
     #hub.visible { display: flex; }
     #hub h1 { font-size: 36px; font-weight: 800; color: #fff; margin-bottom: 10px; line-height: 1.1; }
     #hub h1 span { color: var(--accent); }
+    body.hub-unlocked #hub-name-text { cursor: pointer; }
+    body.hub-unlocked #hub-name-text:hover { border-bottom: 1px dashed var(--border2); }
+    #hub-subtitle { font-variant-numeric: tabular-nums; }
+    .btn-hub-settings { display: none; }
+    body.hub-unlocked .btn-hub-settings { display: flex; }
+    #settings-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+    #settings-overlay.visible { display: flex; }
+    #settings-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px; min-width: 340px; max-width: 460px; width: 90vw; display: flex; flex-direction: column; gap: 18px; }
+    #settings-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    #settings-words { display: flex; flex-wrap: wrap; gap: 8px; min-height: 36px; }
+    .settings-chip { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; padding: 5px 12px; font-size: 13px; color: var(--text); }
+    .settings-chip button { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+    .settings-chip button:hover { color: var(--danger, #f87171); }
+    #settings-box { max-height: 82vh; overflow-y: auto; }
+    .settings-section-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+    .settings-row { display: flex; align-items: center; gap: 10px; }
+    .settings-text-input { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--text); font-family: 'Geist', sans-serif; outline: none; transition: border-color 0.15s; }
+    .settings-text-input:focus { border-color: var(--accent); }
+    .settings-text-short { flex: 0 0 52px; text-align: center; }
+    .settings-color { width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--border2); cursor: pointer; padding: 3px; background: var(--surface2); flex-shrink: 0; }
+    .settings-hint { font-size: 12px; color: var(--text3); }
+    #settings-add-row { display: flex; gap: 8px; }
+    #settings-input { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 9px 12px; font-size: 14px; color: var(--text); font-family: 'Geist', sans-serif; outline: none; transition: border-color 0.15s; }
+    #settings-input:focus { border-color: var(--accent); }
     #hub > p { font-size: 14px; color: var(--text2); margin-bottom: 36px; line-height: 1.7; }
     .hub-topbar { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px; min-height: 32px; }
     .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
-    .hub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; cursor: pointer; transition: all 0.15s; }
+    .hub-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; cursor: pointer; transition: all 0.15s; overflow: hidden; }
     .hub-card:hover { border-color: var(--accent); background: var(--surface2); transform: translateY(-2px); }
     .hub-card-add { border-style: dashed; cursor: pointer; display: none; align-items: center; justify-content: center; color: var(--text3); font-family: 'JetBrains Mono', monospace; font-size: 12px; gap: 8px; min-height: 80px; }
     .hub-card-add:hover { border-color: var(--accent); color: var(--accent); background: transparent; transform: none; }
     body.hub-unlocked .hub-card-add { display: flex; }
     body.viewer .btn-hub-lock { display: none; }
+    .hub-card-cover { display: none; width: calc(100% + 44px); margin: -20px -22px 14px; height: 140px; }
+    .hub-card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hub-card-cover.loaded { display: block; }
     .hub-card-icon { font-size: 20px; margin-bottom: 10px; color: var(--accent); }
+    .hub-card-cover.loaded ~ .hub-card-icon { display: none; }
     .hub-card-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 5px; }
     .hub-card-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text3); }
 
@@ -294,8 +339,9 @@
 
   <!-- HUB -->
   <div id="hub">
-    <h1>GWiki<br><span>Hub</span></h1>
+    <h1><span id="hub-name-text">GWiki</span><br><span id="hub-subtitle">Hub</span></h1>
     <div class="hub-topbar">
+      <button class="btn-lock btn-hub-settings" id="btn-hub-settings" onclick="openHubSettings()">⚙ settings</button>
       <button class="btn-lock locked btn-hub-lock" id="btn-hub-lock" onclick="toggleHubLock()">⊘ unlock</button>
     </div>
     <div class="hub-grid" id="hub-grid"></div>
@@ -343,6 +389,43 @@
 
 </div>
 
+<!-- SETTINGS -->
+<div id="settings-overlay">
+  <div id="settings-box">
+    <div class="settings-section-label">Hub Title</div>
+    <div class="settings-row">
+      <input id="s-hub-name" type="text" class="settings-text-input" placeholder="GWiki" autocomplete="off" spellcheck="false">
+      <input id="s-title-color" type="color" class="settings-color" title="Title color">
+    </div>
+
+    <div class="settings-section-label">Subtitle Color</div>
+    <div class="settings-row">
+      <input id="s-subtitle-color" type="color" class="settings-color" title="Subtitle color">
+      <span class="settings-hint">color of the rotating words</span>
+    </div>
+
+    <div class="settings-section-label">Logo</div>
+    <div class="settings-row">
+      <div id="s-logo-preview" class="logo-icon"></div>
+      <input id="s-logo-char" type="text" class="settings-text-input settings-text-short" maxlength="2" placeholder="G" autocomplete="off">
+      <button id="s-logo-upload-btn" class="btn-modal-cancel">Upload image</button>
+      <button id="s-logo-remove-btn" class="btn-modal-cancel" style="display:none">Use letter</button>
+      <input id="s-logo-file" type="file" accept="image/*" style="display:none">
+    </div>
+
+    <div class="settings-section-label">Subtitle Words</div>
+    <div id="settings-words"></div>
+    <div id="settings-add-row">
+      <input id="settings-input" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="new word">
+      <button id="settings-add-btn" class="btn-modal-ok">Add</button>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:4px">
+      <button class="btn-modal-cancel" onclick="closeHubSettings()">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div id="modal-overlay">
   <div id="modal-box">
@@ -356,15 +439,45 @@
 </div>
 
 <script>
+// ── APPLY STORED SETTINGS ────────────────────────────
+function applyStoredSettings() {
+  // inject overrides via a single style element so effects can temporarily override inline, then revert cleanly
+  let s = document.getElementById('hub-custom-style');
+  if (!s) { s = document.createElement('style'); s.id = 'hub-custom-style'; document.head.appendChild(s); }
+  const tc = localStorage.getItem('hub_title_color');
+  const sc = localStorage.getItem('hub_subtitle_color');
+  s.textContent = [
+    tc ? `#hub-name-text { color: ${tc} !important; }` : '',
+    sc ? `#hub h1 #hub-subtitle { color: ${sc} !important; }` : '',
+  ].join('\n');
+
+  // logo
+  const icon = document.querySelector('.logo .logo-icon');
+  if (!icon) return;
+  if (localStorage.getItem('logo_img')) {
+    icon.textContent = '';
+    icon.style.backgroundImage = `url(/logo.webp?t=${Date.now()})`;
+    icon.style.backgroundSize = 'cover';
+    icon.style.backgroundPosition = 'center';
+    icon.style.backgroundColor = 'transparent';
+  } else {
+    icon.textContent = localStorage.getItem('logo_char') || 'G';
+    icon.style.backgroundImage = '';
+    icon.style.backgroundColor = '';
+  }
+}
+
 // ── STATE ─────────────────────────────────────────────
 let categories = [];
 let currentTopic = null;
 let locked = true;
 let activeWiki = null;
 let hubMode = false;
+const DEFAULT_SUBTITLE_WORDS = ['Hub','Nest','Lab','Vault','Base','Core','Hive','Mind','Node','Map','Loop','Dock','Hangar','Groundbase','Sky','Cloud','School'];
+let subtitleWords = JSON.parse(localStorage.getItem('hub_subtitle_words') || 'null') || [...DEFAULT_SUBTITLE_WORDS];
 
 // ── MODAL ─────────────────────────────────────────────
-function showPrompt(title, placeholder = '') {
+function showPrompt(title, placeholder = '', initialValue = '') {
   return new Promise(resolve => {
     const overlay = document.getElementById('modal-overlay');
     const titleEl = document.getElementById('modal-title');
@@ -375,7 +488,7 @@ function showPrompt(title, placeholder = '') {
     okBtn.className = 'btn-modal-ok';
     input.style.display = '';
     titleEl.textContent = title;
-    input.value = '';
+    input.value = initialValue;
     input.placeholder = placeholder;
     overlay.classList.add('visible');
     input.focus();
@@ -533,11 +646,84 @@ async function uploadImage(file, catSlug) {
   return (await res.json()).url;
 }
 
-// ── INIT ──────────────────────────────────────────────
-const isAdmin = new URLSearchParams(window.location.search).has('admin');
-if (!isAdmin) document.body.classList.add('viewer');
+async function uploadCover(file) {
+  const wikiQ = activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
+  const res = await fetch(
+    `/api/image?filename=cover.webp${wikiQ}`,
+    { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file }
+  );
+  if (!res.ok) throw new Error('upload failed');
+  return (await res.json()).url;
+}
 
+// ── AUTH ──────────────────────────────────────────────
+document.body.classList.add('viewer');
+if (new URLSearchParams(window.location.search).has('admin')) checkAdminAuth();
+
+function showAuthModal(isSetup, errorTitle) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('modal-overlay');
+    const input = document.getElementById('modal-input');
+    const okBtn = document.getElementById('modal-ok');
+    const cancelBtn = document.getElementById('modal-cancel');
+    okBtn.className = 'btn-modal-ok';
+    input.type = 'password';
+    input.style.display = '';
+    document.getElementById('modal-title').textContent =
+      errorTitle || (isSetup ? 'Create admin password:' : 'Admin password:');
+    input.placeholder = isSetup ? 'new password' : 'password';
+    input.value = '';
+    overlay.classList.add('visible');
+    input.focus();
+    const finish = val => {
+      overlay.classList.remove('visible');
+      input.type = 'text';
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+      resolve(val);
+    };
+    const onOk = () => finish(input.value || null);
+    const onCancel = () => finish(null);
+    const onKey = e => { if (e.key === 'Enter') onOk(); else if (e.key === 'Escape') onCancel(); };
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+async function checkAdminAuth() {
+  const stored = localStorage.getItem('admin_token');
+  if (stored) {
+    const res = await fetch(`/api/auth?token=${encodeURIComponent(stored)}`).catch(() => null);
+    if (res?.ok && (await res.json()).ok) { grantAdmin(); return; }
+    localStorage.removeItem('admin_token');
+  }
+  const statusRes = await fetch('/api/auth').catch(() => null);
+  if (!statusRes?.ok) return;
+  const { setup } = await statusRes.json();
+  let errorTitle = null;
+  while (true) {
+    const password = await showAuthModal(setup, errorTitle);
+    if (password === null) return;
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const d = await res.json();
+    if (d.ok) { localStorage.setItem('admin_token', d.token); grantAdmin(); return; }
+    errorTitle = 'Wrong password — try again:';
+  }
+}
+
+function grantAdmin() {
+  document.body.classList.remove('viewer');
+}
+
+// ── INIT ──────────────────────────────────────────────
 async function init() {
+  applyStoredSettings();
   try {
     const data = await apiFetch('/api/topics');
     document.getElementById('first-run').style.display = 'none';
@@ -565,6 +751,7 @@ async function enterWiki(wikiName, wikiDisplay) {
     document.getElementById('wiki-name').textContent = wikiDisplay;
     document.getElementById('wiki-label').textContent = 'wiki';
     document.getElementById('hub').classList.remove('visible');
+    clearInterval(window._hubSubtitleTimer);
     document.getElementById('btn-back').style.display = 'flex';
     const wasHubUnlocked = !hubLocked;
     hubLocked = true;
@@ -648,9 +835,14 @@ function showHub(wikis) {
     const card = document.createElement('div');
     card.className = 'hub-card';
     card.innerHTML = `
+      <div class="hub-card-cover"><img alt=""></div>
       <div class="hub-card-icon">◈</div>
       <div class="hub-card-name">${w.display}</div>
       <div class="hub-card-meta">${w.catCount} categoria${w.catCount !== 1 ? 's' : ''}</div>`;
+    const coverDiv = card.querySelector('.hub-card-cover');
+    const coverImg = coverDiv.querySelector('img');
+    coverImg.addEventListener('load', () => coverDiv.classList.add('loaded'));
+    coverImg.src = `/${encodeURIComponent(w.name)}/cover.webp?t=${Date.now()}`;
     card.addEventListener('click', () => enterWiki(w.name, w.display));
     grid.appendChild(card);
   });
@@ -661,6 +853,114 @@ function showHub(wikis) {
   grid.appendChild(addCard);
 
   document.getElementById('hub').classList.add('visible');
+
+  const subtitleEl = document.getElementById('hub-subtitle');
+  // subtitleWords is module-level, loaded from localStorage
+  const subtitleFx = {
+    scramble: (el, t) => {
+      const ch = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#&'; let i = 0;
+      el._sc = setInterval(() => {
+        const r = Math.floor((i/12)*t.length);
+        el.textContent = t.slice(0,r) + Array.from({length:t.length-r},()=>ch[Math.floor(Math.random()*ch.length)]).join('');
+        if(++i>12){el.textContent=t;clearInterval(el._sc);}
+      }, 40);
+    },
+    fade: (el, t) => {
+      el.style.transition='opacity 0.3s'; el.style.opacity='0';
+      el._tout=setTimeout(()=>{el.textContent=t;el.style.opacity='1';},320);
+    },
+    typewriter: (el, t) => {
+      let i=0; el.textContent='|';
+      el._sc=setInterval(()=>{
+        el.textContent=t.slice(0,++i)+(i<t.length?'|':'');
+        if(i>=t.length)clearInterval(el._sc);
+      },70);
+    },
+    glitch: (el, t) => {
+      const cols=['#ff0066','#00ffcc','#ffff00']; let i=0;
+      el._sc=setInterval(()=>{
+        if(i<10){
+          el.style.transform=`translate(${(Math.random()-.5)*10}px,${(Math.random()-.5)*4}px)`;
+          el.style.color=cols[Math.floor(Math.random()*cols.length)];
+          if(i===5)el.textContent=t;
+        }else{el.style.transform='';el.style.color='';clearInterval(el._sc);}
+        i++;
+      },40);
+    },
+    slide: (el, t) => {
+      el.style.transition='opacity 0.18s,transform 0.18s';
+      el.style.opacity='0'; el.style.transform='translateY(-14px)';
+      el._tout=setTimeout(()=>{
+        el.textContent=t; el.style.transform='translateY(10px)';
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          el.style.transition='opacity 0.2s,transform 0.2s';
+          el.style.opacity='1'; el.style.transform='';
+        }));
+      },200);
+    },
+    blur: (el, t) => {
+      el.style.transition='opacity 0.25s,filter 0.25s';
+      el.style.opacity='0'; el.style.filter='blur(10px)';
+      el._tout=setTimeout(()=>{
+        el.textContent=t; el.style.filter='blur(10px)'; el.style.opacity='0';
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          el.style.transition='opacity 0.3s,filter 0.3s';
+          el.style.opacity='1'; el.style.filter='';
+        }));
+      },280);
+    },
+    flicker: (el, t) => {
+      el.textContent=t;
+      const p=[0,1,0,0,1,0,1,0,1,1,0,1,1,1,1]; let i=0;
+      el._sc=setInterval(()=>{
+        el.style.opacity=p[i]?'1':'0.05';
+        if(++i>=p.length){el.style.opacity='1';clearInterval(el._sc);}
+      },55);
+    },
+    wave: (el, t) => {
+      el.innerHTML=t.split('').map((c,i)=>
+        `<span style="display:inline-block;opacity:0;transform:translateY(18px);transition:opacity 0.18s ${i*45}ms,transform 0.18s ${i*45}ms">${c}</span>`
+      ).join('');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        el.querySelectorAll('span').forEach(s=>{s.style.opacity='1';s.style.transform='';});
+      }));
+      el._tout=setTimeout(()=>{el.textContent=t;},t.length*45+350);
+    },
+    rainbow: (el, t) => {
+      const cols=['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9f1c','#00f5d4'];
+      el.innerHTML=t.split('').map((c,i)=>
+        `<span style="color:${cols[i%cols.length]};transition:color 0.5s">${c}</span>`
+      ).join('');
+      el._tout=setTimeout(()=>{
+        el.querySelectorAll('span').forEach(s=>s.style.color='var(--accent)');
+        setTimeout(()=>{el.textContent=t;},600);
+      },400);
+    },
+  };
+  const fxNames = Object.keys(subtitleFx);
+  const resetSubtitle = el => {
+    clearInterval(el._sc); clearTimeout(el._tout);
+    el.style.transition=el.style.opacity=el.style.transform=el.style.filter=el.style.color='';
+  };
+
+  let subtitleIdx = 0;
+  clearInterval(window._hubSubtitleTimer);
+  window._hubSubtitleTimer = setInterval(() => {
+    subtitleIdx = (subtitleIdx + 1) % subtitleWords.length;
+    resetSubtitle(subtitleEl);
+    subtitleFx[fxNames[Math.floor(Math.random()*fxNames.length)]](subtitleEl, subtitleWords[subtitleIdx]);
+  }, 2200);
+
+  const nameEl = document.getElementById('hub-name-text');
+  const saved = localStorage.getItem('hub_name');
+  if (saved) nameEl.textContent = saved;
+  nameEl.onclick = async () => {
+    if (!document.body.classList.contains('hub-unlocked')) return;
+    const val = await showPrompt('Hub name:', 'ex: My Wiki', nameEl.textContent);
+    if (!val) return;
+    nameEl.textContent = val;
+    localStorage.setItem('hub_name', val);
+  };
 }
 
 // ── VIEW TRANSITIONS ──────────────────────────────────
@@ -737,13 +1037,25 @@ function buildWelcome() {
   const contentArea = document.getElementById('content-area');
   contentArea.innerHTML = '';
 
+  const wikiName = document.getElementById('wiki-name').textContent;
   const el = document.createElement('div');
   el.id = 'welcome';
   el.innerHTML = `
-    <h1>Wiki<br><span>Dev Notes</span></h1>
-    <p>Clica num tópico na sidebar ou escolhe uma categoria.</p>
+    <div class="wiki-hero">
+      <div class="hero-cover empty" id="hero-cover">
+        <img id="hero-cover-img" alt="">
+        <div class="hero-cover-plus">+</div>
+        <div class="hero-cover-handle" id="hero-cover-handle"></div>
+      </div>
+      <div class="hero-text">
+        <h1>${wikiName}</h1>
+        <p class="hero-desc empty" id="hero-desc"></p>
+      </div>
+    </div>
     <div class="welcome-grid" id="welcome-grid"></div>`;
   contentArea.appendChild(el);
+  setupHeroCover();
+  setupHeroDescription();
 
   const grid = document.getElementById('welcome-grid');
   categories.forEach(cat => {
@@ -770,6 +1082,99 @@ function buildWelcome() {
   document.getElementById('btn-delete').classList.remove('visible');
   currentTopic = null;
   updateNavActive();
+}
+
+function setupHeroCover() {
+  const cover = document.getElementById('hero-cover');
+  const img = document.getElementById('hero-cover-img');
+  const base = activeWiki ? `/${encodeURIComponent(activeWiki)}/` : '/';
+
+  img.addEventListener('load', () => cover.classList.remove('empty'));
+  img.addEventListener('error', () => cover.classList.add('empty'));
+  img.src = `${base}cover.webp?t=${Date.now()}`;
+
+  let input = document.getElementById('hero-cover-input');
+  if (!input) {
+    input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.id = 'hero-cover-input';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+  }
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    try {
+      await uploadCover(file);
+      img.src = `${base}cover.webp?t=${Date.now()}`;
+    } catch (e) { alert('Erro ao carregar imagem: ' + e.message); }
+  };
+  cover.onclick = () => {
+    if (document.body.classList.contains('unlocked')) input.click();
+  };
+
+  const handle = document.getElementById('hero-cover-handle');
+  const sizeKey = `cover_size_${activeWiki || '__root__'}`;
+  const saved = parseInt(localStorage.getItem(sizeKey));
+  if (saved >= 40 && saved <= 300) cover.style.width = cover.style.height = saved + 'px';
+
+  handle.addEventListener('click', e => e.stopPropagation());
+  handle.addEventListener('mousedown', e => {
+    if (!document.body.classList.contains('unlocked')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    handle.classList.add('dragging');
+    const startX = e.clientX;
+    const startSize = cover.getBoundingClientRect().width;
+    const onMove = e => {
+      const size = Math.max(40, Math.min(300, startSize + (e.clientX - startX)));
+      cover.style.width = cover.style.height = size + 'px';
+    };
+    const onUp = () => {
+      handle.classList.remove('dragging');
+      const size = parseInt(cover.style.width);
+      if (size) localStorage.setItem(sizeKey, size);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+async function setupHeroDescription() {
+  const desc = document.getElementById('hero-desc');
+  const base = activeWiki ? `/${encodeURIComponent(activeWiki)}/` : '/';
+  const wikiQ = activeWiki ? `?wiki=${encodeURIComponent(activeWiki)}` : '';
+  let current = '';
+  try {
+    const res = await fetch(`${base}description.txt?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) current = (await res.text()).trim();
+  } catch {}
+
+  const render = () => {
+    if (current) {
+      desc.textContent = current;
+      desc.classList.remove('empty');
+    } else {
+      desc.textContent = '+ adicionar descrição';
+      desc.classList.add('empty');
+    }
+  };
+  render();
+
+  desc.onclick = async () => {
+    if (!document.body.classList.contains('unlocked')) return;
+    const val = await showPrompt('Descrição da wiki:', 'ex: notas pessoais sobre o projeto X', current);
+    if (val === null) return;
+    current = val;
+    try {
+      await fetch(`/api/description${wikiQ}`, { method: 'PUT', body: current });
+    } catch (e) { alert('Erro ao guardar descrição: ' + e.message); }
+    render();
+  };
 }
 
 function setupSearch() {
@@ -966,6 +1371,133 @@ function toggleHubLock() {
   document.body.classList.toggle('hub-unlocked', !hubLocked);
   btn.classList.toggle('locked', hubLocked);
   btn.textContent = hubLocked ? '⊘ unlock' : '⊙ lock';
+}
+
+function refreshLogoPreview() {
+  const preview = document.getElementById('s-logo-preview');
+  const removeBtn = document.getElementById('s-logo-remove-btn');
+  if (!preview) return;
+  if (localStorage.getItem('logo_img')) {
+    preview.textContent = '';
+    preview.style.backgroundImage = `url(/logo.webp?t=${Date.now()})`;
+    preview.style.backgroundSize = 'cover';
+    preview.style.backgroundPosition = 'center';
+    preview.style.backgroundColor = 'transparent';
+    if (removeBtn) removeBtn.style.display = '';
+  } else {
+    preview.textContent = localStorage.getItem('logo_char') || 'G';
+    preview.style.backgroundImage = '';
+    preview.style.backgroundColor = '';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
+
+function openHubSettings() {
+  const overlay = document.getElementById('settings-overlay');
+
+  // populate fields
+  document.getElementById('s-hub-name').value = localStorage.getItem('hub_name') || '';
+  document.getElementById('s-title-color').value = localStorage.getItem('hub_title_color') || '#ffffff';
+  document.getElementById('s-subtitle-color').value = localStorage.getItem('hub_subtitle_color') || '#4ade80';
+  document.getElementById('s-logo-char').value = localStorage.getItem('logo_char') || 'G';
+  refreshLogoPreview();
+  renderSettingsChips();
+
+  // hub name
+  document.getElementById('s-hub-name').oninput = e => {
+    const val = e.target.value.trim();
+    document.getElementById('hub-name-text').textContent = val || 'GWiki';
+    val ? localStorage.setItem('hub_name', val) : localStorage.removeItem('hub_name');
+  };
+
+  // colors — live update via injected style
+  document.getElementById('s-title-color').oninput = e => {
+    localStorage.setItem('hub_title_color', e.target.value);
+    applyStoredSettings();
+  };
+  document.getElementById('s-subtitle-color').oninput = e => {
+    localStorage.setItem('hub_subtitle_color', e.target.value);
+    applyStoredSettings();
+  };
+
+  // logo char
+  document.getElementById('s-logo-char').oninput = e => {
+    const char = e.target.value.trim() || 'G';
+    localStorage.setItem('logo_char', char);
+    if (!localStorage.getItem('logo_img')) {
+      applyStoredSettings();
+      refreshLogoPreview();
+    }
+  };
+
+  // logo image upload
+  const fileInput = document.getElementById('s-logo-file');
+  document.getElementById('s-logo-upload-btn').onclick = () => fileInput.click();
+  fileInput.onchange = async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    fileInput.value = '';
+    try {
+      const res = await fetch('/api/image?filename=logo.webp', {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file
+      });
+      if (!res.ok) throw new Error('upload failed');
+      localStorage.setItem('logo_img', '1');
+      applyStoredSettings();
+      refreshLogoPreview();
+    } catch(e) { alert('Upload failed: ' + e.message); }
+  };
+
+  // remove logo image — revert to letter
+  document.getElementById('s-logo-remove-btn').onclick = () => {
+    localStorage.removeItem('logo_img');
+    applyStoredSettings();
+    refreshLogoPreview();
+  };
+
+  const wordInput = document.getElementById('settings-input');
+  overlay.classList.add('visible');
+  wordInput.focus();
+  wordInput.onkeydown = e => { if (e.key === 'Enter') addSubtitleWord(); };
+  document.getElementById('settings-add-btn').onclick = addSubtitleWord;
+  overlay.onclick = e => { if (e.target === overlay) closeHubSettings(); };
+}
+
+function closeHubSettings() {
+  document.getElementById('settings-overlay').classList.remove('visible');
+}
+
+function renderSettingsChips() {
+  const container = document.getElementById('settings-words');
+  container.innerHTML = '';
+  subtitleWords.forEach((word, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'settings-chip';
+    chip.innerHTML = `<span>${word}</span><button title="remove">×</button>`;
+    chip.querySelector('button').onclick = () => {
+      subtitleWords.splice(i, 1);
+      saveSubtitleWords();
+      renderSettingsChips();
+    };
+    container.appendChild(chip);
+  });
+}
+
+function addSubtitleWord() {
+  const input = document.getElementById('settings-input');
+  const word = input.value.trim();
+  if (!word || subtitleWords.includes(word)) { input.value = ''; return; }
+  subtitleWords.push(word);
+  saveSubtitleWords();
+  renderSettingsChips();
+  input.value = '';
+  input.focus();
+}
+
+function saveSubtitleWords() {
+  localStorage.setItem('hub_subtitle_words', JSON.stringify(subtitleWords));
 }
 
 async function addWiki() {
