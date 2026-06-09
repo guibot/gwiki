@@ -8,12 +8,16 @@ import hmac
 import json
 import re
 import secrets
+import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
+from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
 WIKI_PATH = "./"
 PORT = 8080
+
+_write_lock = threading.Lock()
 
 
 def safe_path(base: Path, *parts: str) -> Path | None:
@@ -218,6 +222,17 @@ class WikiHandler(BaseHTTPRequestHandler):
             self.send_json({"setup": not bfly.exists()})
             return
 
+        if path == "/api/settings":
+            sf = self.root / "settings.json"
+            if sf.exists():
+                try:
+                    self.send_json(json.loads(sf.read_text("utf-8")))
+                except Exception:
+                    self.send_json({})
+            else:
+                self.send_json({})
+            return
+
         file_path = safe_path(self.root, path.lstrip("/"))
         if file_path and file_path.exists() and file_path.is_file():
             self.send_file(file_path)
@@ -253,7 +268,8 @@ class WikiHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": "empty body"}, 400)
                 return
             content = raw.decode("utf-8")
-            file_path.write_text(content, encoding="utf-8")
+            with _write_lock:
+                file_path.write_text(content, encoding="utf-8")
             self.send_json({"ok": True})
             return
 
@@ -271,7 +287,20 @@ class WikiHandler(BaseHTTPRequestHandler):
                 target_dir = self.root
             raw = self.read_body()
             content = raw.decode("utf-8").strip()
-            (target_dir / "description.txt").write_text(content, encoding="utf-8")
+            with _write_lock:
+                (target_dir / "description.txt").write_text(content, encoding="utf-8")
+            self.send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/settings":
+            raw = self.read_body()
+            try:
+                data = json.loads(raw.decode("utf-8"))
+            except Exception:
+                self.send_json({"error": "invalid JSON"}, 400)
+                return
+            with _write_lock:
+                (self.root / "settings.json").write_text(json.dumps(data), encoding="utf-8")
             self.send_json({"ok": True})
             return
 
@@ -304,8 +333,9 @@ class WikiHandler(BaseHTTPRequestHandler):
                     self.send_json({"error": "category not found"}, 404)
                     return
                 images_dir = cat_dir / "images"
-                images_dir.mkdir(exist_ok=True)
-                (images_dir / safe_name).write_bytes(raw)
+                with _write_lock:
+                    images_dir.mkdir(exist_ok=True)
+                    (images_dir / safe_name).write_bytes(raw)
                 prefix = f"/{wiki}/topics/{cat}" if wiki else f"/topics/{cat}"
                 self.send_json({"url": f"{prefix}/images/{safe_name}"})
                 return
@@ -320,7 +350,8 @@ class WikiHandler(BaseHTTPRequestHandler):
             else:
                 target_dir = self.root
                 prefix = ""
-            (target_dir / safe_name).write_bytes(raw)
+            with _write_lock:
+                (target_dir / safe_name).write_bytes(raw)
             self.send_json({"url": f"{prefix}/{safe_name}"})
             return
 
@@ -336,16 +367,17 @@ class WikiHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": "missing password"}, 400)
                 return
             bfly = self.root / ".butterfly"
-            if not bfly.exists():
-                salt = secrets.token_hex(16)
-                h = hashlib.sha256((salt + password).encode()).hexdigest()
-                bfly.write_text(f"{salt}:{h}")
-            else:
-                salt, stored = bfly.read_text().strip().split(":", 1)
-                h = hashlib.sha256((salt + password).encode()).hexdigest()
-                if h != stored:
-                    self.send_json({"error": "wrong password"}, 401)
-                    return
+            with _write_lock:
+                if not bfly.exists():
+                    salt = secrets.token_hex(16)
+                    h = hashlib.sha256((salt + password).encode()).hexdigest()
+                    bfly.write_text(f"{salt}:{h}")
+                else:
+                    salt, stored = bfly.read_text().strip().split(":", 1)
+                    h = hashlib.sha256((salt + password).encode()).hexdigest()
+                    if h != stored:
+                        self.send_json({"error": "wrong password"}, 401)
+                        return
             token = hmac.new(h.encode(), b"gwiki-admin", hashlib.sha256).hexdigest()
             self.send_json({"ok": True, "token": token})
             return
@@ -386,7 +418,8 @@ class WikiHandler(BaseHTTPRequestHandler):
                 content = f"<h1>{name}</h1>\n\n<p>Conteúdo do tópico.</p>\n"
             else:
                 content = f"# {name}\n\nConteúdo do tópico.\n"
-            file_path.write_text(content, encoding="utf-8")
+            with _write_lock:
+                file_path.write_text(content, encoding="utf-8")
             self.send_json({"slug": slug, "title": name, "content": content, "type": ftype})
             return
 
@@ -406,7 +439,8 @@ class WikiHandler(BaseHTTPRequestHandler):
             if wiki_dir.exists():
                 self.send_json({"error": "wiki already exists"}, 409)
                 return
-            (wiki_dir / "topics").mkdir(parents=True)
+            with _write_lock:
+                (wiki_dir / "topics").mkdir(parents=True)
             self.send_json({"slug": slug, "display": slug_to_display(slug)})
             return
 
@@ -431,7 +465,8 @@ class WikiHandler(BaseHTTPRequestHandler):
             if cat_dir.exists():
                 self.send_json({"error": "category already exists"}, 409)
                 return
-            cat_dir.mkdir()
+            with _write_lock:
+                cat_dir.mkdir()
             self.send_json({"slug": slug, "display": slug_to_display(slug)})
             return
 
@@ -461,15 +496,20 @@ class WikiHandler(BaseHTTPRequestHandler):
             else:
                 self.send_json({"error": "topic not found"}, 404)
                 return
-            file_path.unlink()
+            with _write_lock:
+                file_path.unlink()
             self.send_json({"ok": True})
             return
 
         self.send_json({"error": "not found"}, 404)
 
 
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
 if __name__ == "__main__":
-    server = HTTPServer(("0.0.0.0", PORT), WikiHandler)
+    server = ThreadedHTTPServer(("0.0.0.0", PORT), WikiHandler)
     print(f"Wiki server → http://localhost:{PORT}  (Ctrl+C para parar)")
     print(f"Pasta: {WikiHandler.root}")
     try:

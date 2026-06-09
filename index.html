@@ -467,6 +467,40 @@ function applyStoredSettings() {
   }
 }
 
+function collectSettings() {
+  return {
+    hub_name:           localStorage.getItem('hub_name'),
+    hub_title_color:    localStorage.getItem('hub_title_color'),
+    hub_subtitle_color: localStorage.getItem('hub_subtitle_color'),
+    logo_char:          localStorage.getItem('logo_char'),
+    logo_img:           localStorage.getItem('logo_img'),
+    hub_subtitle_words: localStorage.getItem('hub_subtitle_words'),
+  };
+}
+
+async function saveSettings() {
+  try {
+    await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(collectSettings()),
+    });
+  } catch (_) {}
+}
+
+async function loadServerSettings() {
+  try {
+    const s = await fetch('/api/settings', { cache: 'no-store' });
+    if (!s.ok) return;
+    const d = await s.json();
+    const keys = ['hub_name','hub_title_color','hub_subtitle_color','logo_char','logo_img','hub_subtitle_words'];
+    keys.forEach(k => {
+      if (d[k] != null) localStorage.setItem(k, d[k]);
+      else localStorage.removeItem(k);
+    });
+  } catch (_) {}
+}
+
 // ── STATE ─────────────────────────────────────────────
 let categories = [];
 let currentTopic = null;
@@ -723,6 +757,8 @@ function grantAdmin() {
 
 // ── INIT ──────────────────────────────────────────────
 async function init() {
+  await loadServerSettings();
+  subtitleWords = JSON.parse(localStorage.getItem('hub_subtitle_words') || 'null') || [...DEFAULT_SUBTITLE_WORDS];
   applyStoredSettings();
   try {
     const data = await apiFetch('/api/topics');
@@ -960,6 +996,7 @@ function showHub(wikis) {
     if (!val) return;
     nameEl.textContent = val;
     localStorage.setItem('hub_name', val);
+    saveSettings();
   };
 }
 
@@ -1408,16 +1445,19 @@ function openHubSettings() {
     const val = e.target.value.trim();
     document.getElementById('hub-name-text').textContent = val || 'GWiki';
     val ? localStorage.setItem('hub_name', val) : localStorage.removeItem('hub_name');
+    saveSettings();
   };
 
   // colors — live update via injected style
   document.getElementById('s-title-color').oninput = e => {
     localStorage.setItem('hub_title_color', e.target.value);
     applyStoredSettings();
+    saveSettings();
   };
   document.getElementById('s-subtitle-color').oninput = e => {
     localStorage.setItem('hub_subtitle_color', e.target.value);
     applyStoredSettings();
+    saveSettings();
   };
 
   // logo char
@@ -1428,6 +1468,7 @@ function openHubSettings() {
       applyStoredSettings();
       refreshLogoPreview();
     }
+    saveSettings();
   };
 
   // logo image upload
@@ -1447,6 +1488,7 @@ function openHubSettings() {
       localStorage.setItem('logo_img', '1');
       applyStoredSettings();
       refreshLogoPreview();
+      saveSettings();
     } catch(e) { alert('Upload failed: ' + e.message); }
   };
 
@@ -1455,6 +1497,7 @@ function openHubSettings() {
     localStorage.removeItem('logo_img');
     applyStoredSettings();
     refreshLogoPreview();
+    saveSettings();
   };
 
   const wordInput = document.getElementById('settings-input');
@@ -1498,6 +1541,7 @@ function addSubtitleWord() {
 
 function saveSubtitleWords() {
   localStorage.setItem('hub_subtitle_words', JSON.stringify(subtitleWords));
+  saveSettings();
 }
 
 async function addWiki() {
