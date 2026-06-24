@@ -1667,6 +1667,7 @@ function openEditor(rawContent, type) {
     wysiwyg.contentEditable = 'true';
     wysiwyg.spellcheck = false;
     wysiwyg.innerHTML = sanitizeHtml(rawContent, editorBasePath);
+    focusTarget = wysiwyg;
     wrap.appendChild(buildWysiwygToolbar(wysiwyg, currentTopic.catSlug));
     wrap.appendChild(wysiwyg);
 
