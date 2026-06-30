@@ -1048,10 +1048,10 @@ function buildSidebar() {
     if (document.body.classList.contains('unlocked')) {
       section.draggable = true;
       section.addEventListener('dragstart', e => {
-        if (e.target !== section && !e.target.classList.contains('nav-category-header')) return;
+        if (!e.target.closest('.nav-category-header') && e.target !== section) return;
         e.stopPropagation();
         e.dataTransfer.effectAllowed = 'move';
-        _dragState = { kind: 'category', catIdx };
+        _dragState = { kind: 'category', catIdx, catSlug: cat.slug };
         section.classList.add('dragging');
       });
       section.addEventListener('dragend', () => {
@@ -1094,7 +1094,8 @@ function buildSidebar() {
         const data = _dragState;
         if (!data || data.kind !== 'category') return;
 
-        const fromIdx = data.catIdx;
+        const fromIdx = categories.findIndex(c => c.slug === data.catSlug);
+        if (fromIdx === -1) return;
         const rect = section.getBoundingClientRect();
         const mid = rect.top + rect.height / 2;
         let toIdx = e.clientY < mid ? catIdx : catIdx + 1;
@@ -1140,12 +1141,14 @@ function buildSidebar() {
         item.draggable = true;
         item.addEventListener('dragstart', e => {
           e.dataTransfer.effectAllowed = 'move';
-          _dragState = { kind: 'topic', catSlug: cat.slug, topicIdx };
+          _dragState = { kind: 'topic', catSlug: cat.slug, topicIdx, topicSlug: topic.slug };
           item.classList.add('dragging');
         });
         item.addEventListener('dragend', () => {
           item.classList.remove('dragging');
           _dragState = null;
+          const existing = items.querySelector('.drag-indicator');
+          if (existing) existing.remove();
         });
 
         item.addEventListener('dragover', e => {
@@ -1165,9 +1168,11 @@ function buildSidebar() {
           }
         });
 
-        item.addEventListener('dragleave', () => {
-          const existing = items.querySelector('.drag-indicator');
-          if (existing) existing.remove();
+        item.addEventListener('dragleave', e => {
+          if (!items.contains(e.relatedTarget)) {
+            const existing = items.querySelector('.drag-indicator');
+            if (existing) existing.remove();
+          }
         });
 
         item.addEventListener('drop', e => {
@@ -1177,7 +1182,8 @@ function buildSidebar() {
           const data = _dragState;
           if (!data || data.kind !== 'topic' || data.catSlug !== cat.slug) return;
 
-          const fromIdx = data.topicIdx;
+          const fromIdx = catObj.topics.findIndex(t => t.slug === data.topicSlug);
+          if (fromIdx === -1) return;
           const rect = item.getBoundingClientRect();
           const mid = rect.top + rect.height / 2;
           let toIdx = e.clientY < mid ? topicIdx : topicIdx + 1;
@@ -1569,6 +1575,8 @@ function toggleLock() {
   document.body.classList.toggle('unlocked', !locked);
   btn.classList.toggle('locked', locked);
   btn.textContent = locked ? '⊘ unlock' : '⊙ lock';
+  buildSidebar();
+  updateNavActive();
   if (currentTopic) loadTopic(currentTopic);
 }
 
@@ -1999,7 +2007,6 @@ async function addTopic(catIdx) {
     });
     const newTopic = { slug: data.slug, title: data.title, type: data.type };
     cat.topics.push(newTopic);
-    cat.topics.sort((a, b) => a.slug.localeCompare(b.slug));
     buildSidebar();
     buildWelcome();
     await loadTopic({ catSlug: cat.slug, slug: data.slug, title: data.title, type });
@@ -2020,7 +2027,6 @@ async function addCategory() {
       body: JSON.stringify({ wiki: activeWiki, name: name.trim() })
     });
     categories.push({ slug: data.slug, display: data.display, topics: [] });
-    categories.sort((a, b) => a.slug.localeCompare(b.slug));
     buildSidebar();
     buildWelcome();
   } catch (e) {
