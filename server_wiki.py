@@ -106,10 +106,18 @@ def get_categories(topics_dir: Path) -> list:
             ftype = "html" if f.suffix == ".html" else "md"
             topics.append({"slug": slug, "title": extract_title(text, slug), "type": ftype})
         topics = _apply_order(topics, cat_dir / "order.json")
+        label = {}
+        label_file = cat_dir / "label.json"
+        if label_file.exists():
+            try:
+                label = json.loads(label_file.read_text(encoding="utf-8"))
+            except Exception:
+                pass
         cats.append({
             "slug": cat_dir.name,
             "display": slug_to_display(cat_dir.name),
             "topics": topics,
+            "label": label,
         })
     cats = _apply_order(cats, topics_dir / "order.json")
     return cats
@@ -356,6 +364,34 @@ class WikiHandler(BaseHTTPRequestHandler):
                 return
             with _write_lock:
                 order_path.write_text(json.dumps(order), encoding="utf-8")
+            self.send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/label":
+            wiki = qs.get("wiki", [None])[0]
+            cat = qs.get("cat", [None])[0]
+            if not cat:
+                self.send_json({"error": "missing cat"}, 400)
+                return
+            topics_dir = resolve_topics_dir(self.root, wiki)
+            if not topics_dir:
+                self.send_json({"error": "wiki not found"}, 404)
+                return
+            cat_dir = safe_path(topics_dir, cat)
+            if not cat_dir or not cat_dir.exists():
+                self.send_json({"error": "category not found"}, 404)
+                return
+            raw = self.read_body()
+            try:
+                data = json.loads(raw.decode("utf-8"))
+                if not isinstance(data, dict):
+                    raise ValueError
+            except Exception:
+                self.send_json({"error": "invalid JSON"}, 400)
+                return
+            allowed = {k: v for k, v in data.items() if k in ("name", "color")}
+            with _write_lock:
+                (cat_dir / "label.json").write_text(json.dumps(allowed), encoding="utf-8")
             self.send_json({"ok": True})
             return
 
