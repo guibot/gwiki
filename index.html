@@ -1054,7 +1054,7 @@ function buildSidebar() {
     const items = document.createElement('div');
     items.className = 'nav-items';
 
-    cat.topics.forEach(topic => {
+    cat.topics.forEach((topic, topicIdx) => {
       const item = document.createElement('div');
       item.className = 'nav-item';
       item.dataset.catSlug = cat.slug;
@@ -1064,7 +1064,80 @@ function buildSidebar() {
       item.appendChild(dot);
       item.appendChild(document.createTextNode(topic.title));
       item.addEventListener('click', () => loadTopic({ catSlug: cat.slug, slug: topic.slug, title: topic.title, type: topic.type }));
+
+      if (document.body.classList.contains('unlocked')) {
+        item.draggable = true;
+        item.addEventListener('dragstart', e => {
+          e.dataTransfer.effectAllowed = 'move';
+          _dragState = { kind: 'topic', catSlug: cat.slug, topicIdx };
+          item.classList.add('dragging');
+        });
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging');
+          _dragState = null;
+        });
+
+        item.addEventListener('dragover', e => {
+          if (!_dragState || _dragState.kind !== 'topic' || _dragState.catSlug !== cat.slug) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          const existing = items.querySelector('.drag-indicator');
+          if (existing) existing.remove();
+          const rect = item.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          const indicator = document.createElement('div');
+          indicator.className = 'drag-indicator';
+          if (e.clientY < mid) {
+            items.insertBefore(indicator, item);
+          } else {
+            item.after(indicator);
+          }
+        });
+
+        item.addEventListener('dragleave', () => {
+          const existing = items.querySelector('.drag-indicator');
+          if (existing) existing.remove();
+        });
+
+        item.addEventListener('drop', e => {
+          e.preventDefault();
+          const existing = items.querySelector('.drag-indicator');
+          if (existing) existing.remove();
+          const data = _dragState;
+          if (!data || data.kind !== 'topic' || data.catSlug !== cat.slug) return;
+
+          const fromIdx = data.topicIdx;
+          const rect = item.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          let toIdx = e.clientY < mid ? topicIdx : topicIdx + 1;
+          if (fromIdx === toIdx || fromIdx === toIdx - 1) return;
+
+          const catObj = categories.find(c => c.slug === cat.slug);
+          if (!catObj) return;
+          const snapshot = [...catObj.topics];
+          const [moved] = catObj.topics.splice(fromIdx, 1);
+          const insertAt = toIdx > fromIdx ? toIdx - 1 : toIdx;
+          catObj.topics.splice(insertAt, 0, moved);
+          buildSidebar();
+          updateNavActive();
+
+          saveOrder('topics', catObj.topics.map(t => t.slug), cat.slug).catch(err => {
+            catObj.topics = snapshot;
+            buildSidebar();
+            updateNavActive();
+            alert('Erro ao guardar ordem: ' + err.message);
+          });
+        });
+      }
+
       items.appendChild(item);
+    });
+
+    items.addEventListener('dragleave', e => {
+      if (!items.contains(e.relatedTarget)) {
+        const existing = items.querySelector('.drag-indicator');
+        if (existing) existing.remove();
+      }
     });
 
     const addBtn = document.createElement('div');
