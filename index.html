@@ -1045,6 +1045,77 @@ function buildSidebar() {
     section.className = 'nav-category';
     section.dataset.catSlug = cat.slug;
 
+    if (document.body.classList.contains('unlocked')) {
+      section.draggable = true;
+      section.addEventListener('dragstart', e => {
+        if (e.target !== section && !e.target.classList.contains('nav-category-header')) return;
+        e.stopPropagation();
+        e.dataTransfer.effectAllowed = 'move';
+        _dragState = { kind: 'category', catIdx };
+        section.classList.add('dragging');
+      });
+      section.addEventListener('dragend', () => {
+        section.classList.remove('dragging');
+        _dragState = null;
+        const existing = nav.querySelector('.drag-indicator');
+        if (existing) existing.remove();
+      });
+
+      section.addEventListener('dragover', e => {
+        if (!_dragState || _dragState.kind !== 'category') return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        const existing = nav.querySelector('.drag-indicator');
+        if (existing) existing.remove();
+        const rect = section.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        const indicator = document.createElement('div');
+        indicator.className = 'drag-indicator';
+        if (e.clientY < mid) {
+          nav.insertBefore(indicator, section);
+        } else {
+          section.after(indicator);
+        }
+      });
+
+      section.addEventListener('dragleave', e => {
+        if (!section.contains(e.relatedTarget)) {
+          const existing = nav.querySelector('.drag-indicator');
+          if (existing) existing.remove();
+        }
+      });
+
+      section.addEventListener('drop', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const existing = nav.querySelector('.drag-indicator');
+        if (existing) existing.remove();
+        const data = _dragState;
+        if (!data || data.kind !== 'category') return;
+
+        const fromIdx = data.catIdx;
+        const rect = section.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        let toIdx = e.clientY < mid ? catIdx : catIdx + 1;
+        if (fromIdx === toIdx || fromIdx === toIdx - 1) return;
+
+        const snapshot = [...categories];
+        const [moved] = categories.splice(fromIdx, 1);
+        const insertAt = toIdx > fromIdx ? toIdx - 1 : toIdx;
+        categories.splice(insertAt, 0, moved);
+        buildSidebar();
+        updateNavActive();
+
+        saveOrder('categories', categories.map(c => c.slug)).catch(err => {
+          categories.splice(0, categories.length, ...snapshot);
+          buildSidebar();
+          updateNavActive();
+          alert('Erro ao guardar ordem: ' + err.message);
+        });
+      });
+    }
+
     const hdr = document.createElement('div');
     hdr.className = 'nav-category-header';
     hdr.innerHTML = `<span class="cat-icon">◈</span>${cat.display}<span class="chevron">▾</span>`;
