@@ -1182,15 +1182,14 @@ function buildSidebar() {
           const data = _dragState;
           if (!data || data.kind !== 'topic' || data.catSlug !== cat.slug) return;
 
+          const catObj = categories.find(c => c.slug === cat.slug);
+          if (!catObj) return;
           const fromIdx = catObj.topics.findIndex(t => t.slug === data.topicSlug);
           if (fromIdx === -1) return;
           const rect = item.getBoundingClientRect();
           const mid = rect.top + rect.height / 2;
           let toIdx = e.clientY < mid ? topicIdx : topicIdx + 1;
           if (fromIdx === toIdx || fromIdx === toIdx - 1) return;
-
-          const catObj = categories.find(c => c.slug === cat.slug);
-          if (!catObj) return;
           const snapshot = [...catObj.topics];
           const [moved] = catObj.topics.splice(fromIdx, 1);
           const insertAt = toIdx > fromIdx ? toIdx - 1 : toIdx;
