@@ -173,6 +173,7 @@ git commit -m "feat: order-aware get_categories and PUT /api/order endpoint"
 
 **Interfaces:**
 - Produces: CSS classes `.drag-over-before` and `.drag-over-after` — 2px accent line above/below item
+- Produces: `let _dragState` module-level variable — holds `{kind, catSlug?, topicIdx?, catIdx?}` during drag; `null` otherwise
 - Produces: `async function saveOrder(type, slugs, catSlug)` — calls `PUT /api/order`, throws on failure
 
 - [ ] **Step 1: Add drag indicator CSS**
@@ -191,11 +192,13 @@ In `index.html`, after the `.nav-add-category:hover` rule (around line 99), add:
     }
 ```
 
-- [ ] **Step 2: Add `saveOrder` function**
+- [ ] **Step 2: Add `_dragState` variable and `saveOrder` function**
 
 In `index.html`, after the `apiFetch` function definition (after line 669), add:
 
 ```javascript
+let _dragState = null;
+
 async function saveOrder(type, slugs, catSlug) {
   const params = new URLSearchParams({ type });
   if (type === 'topics' && catSlug) params.set('cat', catSlug);
@@ -207,6 +210,8 @@ async function saveOrder(type, slugs, catSlug) {
   });
 }
 ```
+
+> **Why `_dragState`:** `e.dataTransfer.getData()` returns empty string in `dragover` events (browser security restriction — data only accessible in `drop`). `_dragState` is set in `dragstart` and cleared in `dragend`, making it readable in `dragover` to guard and show the drop indicator.
 
 - [ ] **Step 3: Verify CSS loads without error**
 
@@ -251,14 +256,16 @@ In `index.html`, find the `cat.topics.forEach(topic => {` block inside `buildSid
         item.draggable = true;
         item.addEventListener('dragstart', e => {
           e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'topic', catSlug: cat.slug, topicIdx }));
+          _dragState = { kind: 'topic', catSlug: cat.slug, topicIdx };
           item.classList.add('dragging');
         });
-        item.addEventListener('dragend', () => item.classList.remove('dragging'));
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging');
+          _dragState = null;
+        });
 
         item.addEventListener('dragover', e => {
-          const data = JSON.parse(e.dataTransfer.getData('text/plain') || 'null');
-          if (!data || data.kind !== 'topic' || data.catSlug !== cat.slug) return;
+          if (!_dragState || _dragState.kind !== 'topic' || _dragState.catSlug !== cat.slug) return;
           e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
           const existing = items.querySelector('.drag-indicator');
@@ -283,8 +290,7 @@ In `index.html`, find the `cat.topics.forEach(topic => {` block inside `buildSid
           e.preventDefault();
           const existing = items.querySelector('.drag-indicator');
           if (existing) existing.remove();
-          let data;
-          try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+          const data = _dragState;
           if (!data || data.kind !== 'topic' || data.catSlug !== cat.slug) return;
 
           const fromIdx = data.topicIdx;
@@ -367,19 +373,18 @@ In `buildSidebar`, find where `section.className = 'nav-category'` is set (aroun
         if (e.target !== section && !e.target.classList.contains('nav-category-header')) return;
         e.stopPropagation();
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', JSON.stringify({ kind: 'category', catIdx }));
+        _dragState = { kind: 'category', catIdx };
         section.classList.add('dragging');
       });
       section.addEventListener('dragend', () => {
         section.classList.remove('dragging');
+        _dragState = null;
         const existing = nav.querySelector('.drag-indicator');
         if (existing) existing.remove();
       });
 
       section.addEventListener('dragover', e => {
-        let data;
-        try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
-        if (!data || data.kind !== 'category') return;
+        if (!_dragState || _dragState.kind !== 'category') return;
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
@@ -408,8 +413,7 @@ In `buildSidebar`, find where `section.className = 'nav-category'` is set (aroun
         e.stopPropagation();
         const existing = nav.querySelector('.drag-indicator');
         if (existing) existing.remove();
-        let data;
-        try { data = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+        const data = _dragState;
         if (!data || data.kind !== 'category') return;
 
         const fromIdx = data.catIdx;
@@ -437,9 +441,9 @@ In `buildSidebar`, find where `section.className = 'nav-category'` is set (aroun
 
 Note: the `categories.forEach((cat, catIdx) => {` loop variable is `catIdx` — confirm this matches the actual variable name in the existing loop. If it's unnamed (e.g., `categories.forEach(cat => {`), change it to `categories.forEach((cat, catIdx) => {`.
 
-- [ ] **Step 2: Prevent topic dragover/drop from bubbling to category**
+- [ ] **Step 2: Verify topic drag doesn't trigger category handlers**
 
-In the topic `dragover` and `drop` handlers added in Task 3, confirm `e.stopPropagation()` is NOT needed (topic drag events have `data.kind !== 'category'` guard, so category handler returns early). No change needed.
+No code change needed. Category `dragover` guard is `if (!_dragState || _dragState.kind !== 'category') return` — when a topic is being dragged, `_dragState.kind === 'topic'`, so the category handler exits immediately. Confirm this by dragging a topic and verifying no category-level drop indicator appears.
 
 - [ ] **Step 3: Manual test — category drag-and-drop**
 
