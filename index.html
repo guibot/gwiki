@@ -98,6 +98,16 @@
     }
     .nav-add-category:hover { border-color: var(--accent); color: var(--accent); }
 
+    body.unlocked .nav-item[draggable],
+    body.unlocked .nav-category[draggable] { cursor: grab; }
+    body.unlocked .nav-item[draggable]:active,
+    body.unlocked .nav-category[draggable]:active { cursor: grabbing; }
+    .nav-item.dragging, .nav-category.dragging { opacity: 0.4; }
+    .drag-indicator {
+      height: 2px; background: var(--accent); border-radius: 1px;
+      margin: 0 18px; pointer-events: none;
+    }
+
     body.unlocked .nav-add-topic,
     body.unlocked .nav-add-category { display: block; }
 
@@ -670,6 +680,19 @@ async function apiFetch(path, opts = {}) {
     throw new Error(d.error || res.statusText);
   }
   return res.json();
+}
+
+let _dragState = null;
+
+async function saveOrder(type, slugs, catSlug) {
+  const params = new URLSearchParams({ type });
+  if (type === 'topics' && catSlug) params.set('cat', catSlug);
+  if (activeWiki) params.set('wiki', activeWiki);
+  await apiFetch(`/api/order?${params}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(slugs),
+  });
 }
 
 async function uploadImage(file, catSlug) {
