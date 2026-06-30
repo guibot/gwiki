@@ -76,6 +76,20 @@ def get_wikis(root: Path) -> list:
     return wikis
 
 
+def _apply_order(items: list, order_file: Path) -> list:
+    if not order_file.exists():
+        return items
+    try:
+        order = json.loads(order_file.read_text(encoding="utf-8"))
+    except Exception:
+        return items
+    index = {item["slug"]: item for item in items}
+    ordered = [index[s] for s in order if s in index]
+    seen = {item["slug"] for item in ordered}
+    ordered += [item for item in items if item["slug"] not in seen]
+    return ordered
+
+
 def get_categories(topics_dir: Path) -> list:
     cats = []
     for cat_dir in sorted(topics_dir.iterdir()):
@@ -89,11 +103,13 @@ def get_categories(topics_dir: Path) -> list:
             text = f.read_text(encoding="utf-8")
             ftype = "html" if f.suffix == ".html" else "md"
             topics.append({"slug": slug, "title": extract_title(text, slug), "type": ftype})
+        topics = _apply_order(topics, cat_dir / "order.json")
         cats.append({
             "slug": cat_dir.name,
             "display": slug_to_display(cat_dir.name),
             "topics": topics,
         })
+    cats = _apply_order(cats, topics_dir / "order.json")
     return cats
 
 
@@ -301,6 +317,40 @@ class WikiHandler(BaseHTTPRequestHandler):
                 return
             with _write_lock:
                 (self.root / "settings.json").write_text(json.dumps(data), encoding="utf-8")
+            self.send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/order":
+            order_type = qs.get("type", [None])[0]
+            wiki = qs.get("wiki", [None])[0]
+            cat = qs.get("cat", [None])[0]
+            if order_type not in ("topics", "categories"):
+                self.send_json({"error": "type must be topics or categories"}, 400)
+                return
+            if order_type == "topics" and not cat:
+                self.send_json({"error": "missing cat"}, 400)
+                return
+            topics_dir = resolve_topics_dir(self.root, wiki)
+            if not topics_dir:
+                self.send_json({"error": "wiki not found"}, 404)
+                return
+            raw = self.read_body()
+            try:
+                order = json.loads(raw.decode("utf-8"))
+                if not isinstance(order, list) or not all(isinstance(s, str) for s in order):
+                    raise ValueError
+            except Exception:
+                self.send_json({"error": "body must be JSON array of strings"}, 400)
+                return
+            if order_type == "topics":
+                order_path = safe_path(topics_dir, cat, "order.json")
+            else:
+                order_path = safe_path(topics_dir, "order.json")
+            if not order_path:
+                self.send_json({"error": "invalid path"}, 400)
+                return
+            with _write_lock:
+                order_path.write_text(json.dumps(order), encoding="utf-8")
             self.send_json({"ok": True})
             return
 
