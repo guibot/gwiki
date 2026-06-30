@@ -367,6 +367,41 @@ class WikiHandler(BaseHTTPRequestHandler):
             self.send_json({"ok": True})
             return
 
+        if parsed.path == "/api/wiki":
+            wiki = qs.get("wiki", [None])[0]
+            if not wiki:
+                self.send_json({"error": "missing wiki"}, 400)
+                return
+            raw = self.read_body()
+            try:
+                data = json.loads(raw.decode("utf-8"))
+                new_name = data.get("name", "").strip()
+            except Exception:
+                self.send_json({"error": "invalid JSON"}, 400)
+                return
+            if not new_name:
+                self.send_json({"error": "missing name"}, 400)
+                return
+            new_slug = to_slug(new_name)
+            if not new_slug:
+                self.send_json({"error": "invalid name"}, 400)
+                return
+            old_dir = safe_path(self.root, wiki)
+            if not old_dir or not old_dir.exists():
+                self.send_json({"error": "wiki not found"}, 404)
+                return
+            new_dir = safe_path(self.root, new_slug)
+            if not new_dir:
+                self.send_json({"error": "invalid new name"}, 400)
+                return
+            if new_dir.exists() and new_dir != old_dir:
+                self.send_json({"error": "wiki already exists"}, 409)
+                return
+            with _write_lock:
+                old_dir.rename(new_dir)
+            self.send_json({"slug": new_slug, "display": slug_to_display(new_slug)})
+            return
+
         if parsed.path == "/api/label":
             wiki = qs.get("wiki", [None])[0]
             cat = qs.get("cat", [None])[0]
@@ -393,6 +428,46 @@ class WikiHandler(BaseHTTPRequestHandler):
             with _write_lock:
                 (cat_dir / "label.json").write_text(json.dumps(allowed), encoding="utf-8")
             self.send_json({"ok": True})
+            return
+
+        if parsed.path == "/api/category":
+            wiki = qs.get("wiki", [None])[0]
+            cat = qs.get("cat", [None])[0]
+            if not cat:
+                self.send_json({"error": "missing cat"}, 400)
+                return
+            raw = self.read_body()
+            try:
+                data = json.loads(raw.decode("utf-8"))
+                new_name = data.get("name", "").strip()
+            except Exception:
+                self.send_json({"error": "invalid JSON"}, 400)
+                return
+            if not new_name:
+                self.send_json({"error": "missing name"}, 400)
+                return
+            new_slug = to_slug(new_name)
+            if not new_slug:
+                self.send_json({"error": "invalid name"}, 400)
+                return
+            topics_dir = resolve_topics_dir(self.root, wiki)
+            if not topics_dir:
+                self.send_json({"error": "wiki not found"}, 404)
+                return
+            old_dir = safe_path(topics_dir, cat)
+            if not old_dir or not old_dir.exists():
+                self.send_json({"error": "category not found"}, 404)
+                return
+            new_dir = safe_path(topics_dir, new_slug)
+            if not new_dir:
+                self.send_json({"error": "invalid new name"}, 400)
+                return
+            if new_dir.exists() and new_dir != old_dir:
+                self.send_json({"error": "category already exists"}, 409)
+                return
+            with _write_lock:
+                old_dir.rename(new_dir)
+            self.send_json({"slug": new_slug, "display": slug_to_display(new_slug)})
             return
 
         self.send_json({"error": "not found"}, 404)
@@ -566,6 +641,26 @@ class WikiHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
+
+        if parsed.path == "/api/category":
+            wiki = qs.get("wiki", [None])[0]
+            cat = qs.get("cat", [None])[0]
+            if not cat:
+                self.send_json({"error": "missing cat"}, 400)
+                return
+            topics_dir = resolve_topics_dir(self.root, wiki)
+            if not topics_dir:
+                self.send_json({"error": "wiki not found"}, 404)
+                return
+            cat_dir = safe_path(topics_dir, cat)
+            if not cat_dir or not cat_dir.exists():
+                self.send_json({"error": "category not found"}, 404)
+                return
+            with _write_lock:
+                import shutil
+                shutil.rmtree(cat_dir)
+            self.send_json({"ok": True})
+            return
 
         if parsed.path == "/api/topic":
             wiki = qs.get("wiki", [None])[0]
