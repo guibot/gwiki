@@ -81,6 +81,8 @@ def _apply_order(items: list, order_file: Path) -> list:
         return items
     try:
         order = json.loads(order_file.read_text(encoding="utf-8"))
+        if not isinstance(order, list):
+            return items
     except Exception:
         return items
     index = {item["slug"]: item for item in items}
@@ -348,6 +350,9 @@ class WikiHandler(BaseHTTPRequestHandler):
                 order_path = safe_path(topics_dir, "order.json")
             if not order_path:
                 self.send_json({"error": "invalid path"}, 400)
+                return
+            if not order_path.parent.is_dir():
+                self.send_json({"error": "cat not found"}, 404)
                 return
             with _write_lock:
                 order_path.write_text(json.dumps(order), encoding="utf-8")
