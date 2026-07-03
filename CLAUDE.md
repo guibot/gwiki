@@ -62,16 +62,36 @@ Opened by clicking a topic in unlocked admin mode. Uses `contenteditable`. Toolb
 |--------|------|-------|
 | GET | `/api/topics[?wiki=]` | Returns hub list or category tree (topics include `type`) |
 | GET | `/api/topic?cat=&slug=[&wiki=]` | File content + `type` |
-| PUT | `/api/topic?cat=&slug=[&wiki=]` | Save content (detects extension from existing file) |
-| POST | `/api/topic` | Create topic — body: `{name, type, cat, wiki}` |
-| POST | `/api/category` | Create category |
-| POST | `/api/wiki` | Create sub-wiki (hub mode) |
-| POST | `/api/image?cat=&filename=[&wiki=]` | Upload image — raw binary body, saves to `topics/<cat>/images/` |
-| DELETE | `/api/topic?cat=&slug=[&wiki=]` | Delete topic |
+| GET | `/api/auth[?token=]` | No token: setup status. With `token`: validates it |
+| GET | `/api/settings` | Reads `settings.json` (hub title/colors/logo/rotating words) |
+| PUT | `/api/topic?cat=&slug=[&wiki=]` | Save content (detects extension from existing file) — auth required |
+| PUT | `/api/description?wiki=` | Save `description.txt` — auth required |
+| PUT | `/api/settings` | Overwrite `settings.json` — auth required |
+| PUT | `/api/order?type=topics\|categories&wiki=&cat=` | Save `order.json` (array of slugs) — auth required |
+| PUT | `/api/wiki?wiki=` | Rename sub-wiki (renames folder, re-slugs) — auth required |
+| PUT | `/api/label?cat=&wiki=` | Save `label.json` (`name`/`color`) for a category — auth required |
+| PUT | `/api/category?cat=&wiki=` | Rename category (renames folder, re-slugs) — auth required |
+| POST | `/api/topic` | Create topic — body: `{name, type, cat, wiki}` — auth required |
+| POST | `/api/category` | Create category — auth required |
+| POST | `/api/wiki` | Create sub-wiki (hub mode) — auth required |
+| POST | `/api/image?cat=&filename=[&wiki=]` | Upload image — raw binary body, saves to `topics/<cat>/images/`; omit `cat` to write `cover.webp`/`logo.webp` at wiki/server root — auth required |
+| POST | `/api/auth` | body: `{password}` — first call sets the password, later calls verify it; returns a Bearer token |
+| DELETE | `/api/topic?cat=&slug=[&wiki=]` | Delete topic — auth required |
+| DELETE | `/api/category?cat=&wiki=` | Delete category (recursive) — auth required |
 
 ### Security
 
 `safe_path()` blocks path traversal — always use it before touching the filesystem. Image filenames are sanitized with `re.sub(r"[^a-zA-Z0-9._-]", "_", filename)`.
+
+`require_auth()` gates every write route (all of PUT/DELETE, and POST except `/api/auth` itself) — checks an `Authorization: Bearer <token>` header via `hmac.compare_digest` against a token derived from the stored password hash (`check_auth()`/`admin_token()`). Frontend sends this header via `authHeaders()` (`index.html`), reading `admin_token` from `localStorage`. Password itself is salted SHA-256, stored in `.butterfly` at server root.
+
+### Category label editor
+
+In unlocked admin mode, a category can be given a custom display name and color, stored as `label.json` in the category folder (via `PUT /api/label`). The editor modal also renders a QR code (inline vanilla-JS `qrcode` library embedded at the top of `index.html`, no dependency) linking to the category's deep link, and can export the label as JPEG or PDF (`exportLabelJpeg`/`exportLabelPdf`).
+
+### Drag-and-drop / manual ordering
+
+Categories and topics can be reordered by drag-and-drop in unlock mode; order is persisted per-list as `order.json` (array of slugs) via `PUT /api/order?type=topics|categories`.
 
 ### Access modes
 
