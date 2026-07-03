@@ -2857,7 +2857,7 @@ async function saveSettings() {
   try {
     await fetch('/api/settings', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(collectSettings()),
     });
   } catch (_) {}
@@ -3038,8 +3038,14 @@ function wikiParam() {
   return activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
 }
 
+function authHeaders() {
+  const t = localStorage.getItem('admin_token');
+  return t ? { 'Authorization': 'Bearer ' + t } : {};
+}
+
 async function apiFetch(path, opts = {}) {
-  const res = await fetch(path, { cache: 'no-store', ...opts });
+  const headers = { ...authHeaders(), ...(opts.headers || {}) };
+  const res = await fetch(path, { cache: 'no-store', ...opts, headers });
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));
     throw new Error(d.error || res.statusText);
@@ -3066,7 +3072,7 @@ async function uploadImage(file, catSlug) {
   const wikiQ = activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
   const res = await fetch(
     `/api/image?cat=${encodeURIComponent(catSlug)}&filename=${encodeURIComponent(safe)}${wikiQ}`,
-    { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file }
+    { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', ...authHeaders() }, body: file }
   );
   if (!res.ok) throw new Error('upload failed');
   return (await res.json()).url;
@@ -3076,7 +3082,7 @@ async function uploadCover(file) {
   const wikiQ = activeWiki ? `&wiki=${encodeURIComponent(activeWiki)}` : '';
   const res = await fetch(
     `/api/image?filename=cover.webp${wikiQ}`,
-    { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file }
+    { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', ...authHeaders() }, body: file }
   );
   if (!res.ok) throw new Error('upload failed');
   return (await res.json()).url;
@@ -3810,7 +3816,7 @@ async function setupHeroDescription() {
     if (val === null) return;
     current = val;
     try {
-      await fetch(`/api/description${wikiQ}`, { method: 'PUT', body: current });
+      await fetch(`/api/description${wikiQ}`, { method: 'PUT', headers: authHeaders(), body: current });
     } catch (e) { alert('Erro ao guardar descrição: ' + e.message); }
     render();
   };
@@ -4085,7 +4091,7 @@ function openHubSettings() {
     try {
       const res = await fetch('/api/image?filename=logo.webp', {
         method: 'POST',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        headers: { 'Content-Type': file.type || 'application/octet-stream', ...authHeaders() },
         body: file
       });
       if (!res.ok) throw new Error('upload failed');

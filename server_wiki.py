@@ -28,11 +28,26 @@ def safe_path(base: Path, *parts: str) -> Path | None:
         for part in parts:
             joined = joined / part
         resolved = joined.resolve()
-        if str(resolved).startswith(str(base.resolve())):
+        if resolved == base.resolve() or resolved.is_relative_to(base.resolve()):
             return resolved
         return None
     except Exception:
         return None
+
+
+def admin_token(root: Path) -> str | None:
+    bfly = root / ".butterfly"
+    if not bfly.exists():
+        return None
+    try:
+        _, stored = bfly.read_text().strip().split(":", 1)
+    except ValueError:
+        return None
+    return hmac.new(stored.encode(), b"gwiki-admin", hashlib.sha256).hexdigest()
+
+
+IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+ROOT_IMAGE_NAMES = {"cover.webp", "logo.webp"}
 
 
 def slug_to_display(slug: str) -> str:
@@ -164,9 +179,22 @@ class WikiHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def check_auth(self) -> bool:
+        expected = admin_token(self.root)
+        if expected is None:
+            return False
+        auth = self.headers.get("Authorization", "")
+        token = auth[7:] if auth.startswith("Bearer ") else ""
+        return hmac.compare_digest(token, expected)
+
+    def require_auth(self) -> bool:
+        if self.check_auth():
+            return True
+        self.send_json({"error": "unauthorized"}, 401)
+        return False
 
     def send_file(self, path: Path):
         import mimetypes
@@ -178,13 +206,6 @@ class WikiHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
-
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -235,17 +256,12 @@ class WikiHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/auth":
-            bfly = self.root / ".butterfly"
             token = qs.get("token", [None])[0]
             if token:
-                if not bfly.exists():
-                    self.send_json({"ok": False})
-                    return
-                _, stored = bfly.read_text().strip().split(":", 1)
-                expected = hmac.new(stored.encode(), b"gwiki-admin", hashlib.sha256).hexdigest()
-                self.send_json({"ok": token == expected})
+                expected = admin_token(self.root)
+                self.send_json({"ok": expected is not None and hmac.compare_digest(token, expected)})
                 return
-            self.send_json({"setup": not bfly.exists()})
+            self.send_json({"setup": not (self.root / ".butterfly").exists()})
             return
 
         if path == "/api/settings":
@@ -259,13 +275,19 @@ class WikiHandler(BaseHTTPRequestHandler):
                 self.send_json({})
             return
 
-        file_path = safe_path(self.root, path.lstrip("/"))
+        rel = path.lstrip("/")
+        if any(part.startswith(".") for part in Path(rel).parts):
+            self.send_json({"error": "not found"}, 404)
+            return
+        file_path = safe_path(self.root, rel)
         if file_path and file_path.exists() and file_path.is_file():
             self.send_file(file_path)
         else:
             self.send_json({"error": "not found"}, 404)
 
     def do_PUT(self):
+        if not self.require_auth():
+            return
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
 
@@ -476,6 +498,9 @@ class WikiHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
 
+        if parsed.path != "/api/auth" and not self.require_auth():
+            return
+
         if parsed.path == "/api/image":
             cat = qs.get("cat", [None])[0]
             filename = qs.get("filename", [None])[0]
@@ -484,6 +509,9 @@ class WikiHandler(BaseHTTPRequestHandler):
                 self.send_json({"error": "missing filename"}, 400)
                 return
             safe_name = re.sub(r"[^a-zA-Z0-9._-]", "_", filename)
+            if safe_name.startswith(".") or Path(safe_name).suffix.lower() not in IMAGE_EXTS:
+                self.send_json({"error": "invalid image filename"}, 400)
+                return
             raw = self.read_body()
             if not raw:
                 self.send_json({"error": "empty body"}, 400)
@@ -507,6 +535,9 @@ class WikiHandler(BaseHTTPRequestHandler):
                 return
 
             # No category — store at wiki root, or server root if no wiki given
+            if safe_name not in ROOT_IMAGE_NAMES:
+                self.send_json({"error": "only cover.webp or logo.webp allowed at root"}, 400)
+                return
             if is_hub_mode(self.root) and wiki:
                 target_dir = safe_path(self.root, wiki)
                 if not target_dir or not target_dir.exists():
@@ -541,7 +572,7 @@ class WikiHandler(BaseHTTPRequestHandler):
                 else:
                     salt, stored = bfly.read_text().strip().split(":", 1)
                     h = hashlib.sha256((salt + password).encode()).hexdigest()
-                    if h != stored:
+                    if not hmac.compare_digest(h, stored):
                         self.send_json({"error": "wrong password"}, 401)
                         return
             token = hmac.new(h.encode(), b"gwiki-admin", hashlib.sha256).hexdigest()
@@ -639,6 +670,8 @@ class WikiHandler(BaseHTTPRequestHandler):
         self.send_json({"error": "not found"}, 404)
 
     def do_DELETE(self):
+        if not self.require_auth():
+            return
         parsed = urlparse(self.path)
         qs = parse_qs(parsed.query)
 
@@ -698,6 +731,8 @@ if __name__ == "__main__":
     server = ThreadedHTTPServer(("0.0.0.0", PORT), WikiHandler)
     print(f"Wiki server → http://localhost:{PORT}  (Ctrl+C para parar)")
     print(f"Pasta: {WikiHandler.root}")
+    if not (WikiHandler.root / ".butterfly").exists():
+        print("⚠ Sem password de admin — edição bloqueada até a definires em /?admin")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
