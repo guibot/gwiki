@@ -4237,6 +4237,25 @@ function buildWysiwygToolbar(wysiwyg, catSlug) {
     document.execCommand('createLink', false, url);
   });
 
+  const codeBtn = document.createElement('button');
+  codeBtn.className = 'wysiwyg-btn';
+  codeBtn.textContent = '</>';
+  codeBtn.title = 'Bloco de código';
+  codeBtn.addEventListener('mousedown', e => {
+    e.preventDefault();
+    wysiwyg.focus();
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+    const pre = node && node.closest('pre');
+    if (pre && wysiwyg.contains(pre)) {
+      document.execCommand('formatBlock', false, 'p');
+      return;
+    }
+    const text = sel.toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    document.execCommand('insertHTML', false, `<pre><code>${text || '<br>'}</code></pre><p><br></p>`);
+  });
+
   bar.append(
     btn('<b>B</b>', 'bold'), btn('<i>I</i>', 'italic'), btn('<u>U</u>', 'underline'),
     sep(),
@@ -4244,7 +4263,7 @@ function buildWysiwygToolbar(wysiwyg, catSlug) {
     sep(),
     btn('UL', 'insertUnorderedList'), btn('OL', 'insertOrderedList'),
     sep(),
-    imgBtn, linkBtn,
+    imgBtn, linkBtn, codeBtn,
     sep(),
     btn('✕', 'removeFormat')
   );
