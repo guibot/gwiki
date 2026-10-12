@@ -2635,18 +2635,9 @@ var qrcode = function() {
     #label-modal.visible { display: flex; }
     #label-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 28px; min-width: 340px; max-width: 500px; width: 90vw; display: flex; flex-direction: column; gap: 14px; }
     #label-box-title { font-size: 15px; font-weight: 600; color: var(--text); }
-    .label-preview { border-radius: 10px; border: 3px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; gap: 10px; background: #fff; aspect-ratio: 1 / 1; width: min(400px, 100%); align-self: center; }
-    .label-preview.green { border-color: #4ade80; }
-    .label-preview.orange { border-color: #fb923c; }
-    .label-preview.red { border-color: #f87171; }
-    .label-stripe { width: 100%; height: 5px; border-radius: 3px; }
-    .label-preview.green .label-stripe { background: #4ade80; }
-    .label-preview.orange .label-stripe { background: #fb923c; }
-    .label-preview.red .label-stripe { background: #f87171; }
+    .label-preview { border-radius: 10px; border: 3px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; gap: 10px; background: #fff; aspect-ratio: 1 / 1; width: min(400px, 100%); align-self: center; }
+    .label-stripe { display: none; }
     .label-name-display { font-size: 17px; font-weight: 700; color: #111; text-align: center; font-family: 'Geist', sans-serif; }
-    .label-preview.green .label-name-display { color: #4ade80; }
-    .label-preview.orange .label-name-display { color: #fb923c; }
-    .label-preview.red .label-name-display { color: #f87171; }
     .label-color-row { display: flex; gap: 10px; }
     .label-color-btn { width: 30px; height: 30px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
     .label-color-btn:hover { transform: scale(1.1); }
@@ -4671,9 +4662,9 @@ function printLabel() {
   win.document.write(`<!DOCTYPE html><html><head><title>Label</title>
     <style>
       body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#fff;font-family:sans-serif}
-      .label{border:4px solid ${colorHex};border-radius:12px;padding:22px;text-align:center;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:400px;height:400px;box-sizing:border-box}
-      .stripe{width:100%;height:6px;border-radius:3px;background:${colorHex}}
-      .name{font-size:22px;font-weight:700;color:${colorHex}}
+      .label{border:none;border-radius:12px;padding:22px;text-align:center;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:400px;height:400px;box-sizing:border-box}
+      .stripe{display:none}
+      .name{font-size:22px;font-weight:700;color:#111}
       @media print{body{margin:0}}
     </style></head><body>
     <div class="label">
