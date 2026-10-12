@@ -1,3 +1,5 @@
+![GWiki](demo/gwiki.jpg)
+
 # GWiki
 
 A lightweight personal wiki. Self-hosted, single-file frontend, Python stdlib server, zero dependencies.
