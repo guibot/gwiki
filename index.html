@@ -2791,7 +2791,7 @@ var qrcode = function() {
     <div class="label-preview green" id="label-preview">
       <div class="label-stripe"></div>
       <div class="label-name-display" id="label-preview-name">Categoria</div>
-      <img id="label-qr" src="" alt="QR Code" style="display:block;width:180px;height:180px">
+      <img id="label-qr" src="" alt="QR Code" style="display:block;width:180px;height:180px;image-rendering:pixelated">
       <div class="label-stripe"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
@@ -4577,11 +4577,13 @@ function _makeQrDataUrl(url) {
     const qr = qrcode(0, 'M');
     qr.addData(url);
     qr.make();
-    const cell = 4, n = qr.getModuleCount();
+    const n = qr.getModuleCount();
+    const cell = Math.floor(180 / n);
     const size = n * cell;
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = size;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = '#000';
@@ -4635,22 +4637,72 @@ async function _captureLabel() {
 }
 
 async function exportLabelJpeg() {
-  const canvas = await _captureLabel();
+  await document.fonts.ready;
+  const name = document.getElementById('label-name-input').value || '—';
+  const exportSize = 600, pad = 28, textH = 56;
+  const qrArea = exportSize - pad * 2 - textH - 12;
+  const qr = qrcode(0, 'M');
+  qr.addData(_labelTargetUrl());
+  qr.make();
+  const n = qr.getModuleCount();
+  const cell = Math.floor(qrArea / n);
+  const actualQr = n * cell;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = exportSize;
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, exportSize, exportSize);
+  ctx.fillStyle = '#111';
+  ctx.font = 'bold 32px Geist, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(name, exportSize / 2, pad + textH / 2);
+  const qrX = Math.round((exportSize - actualQr) / 2);
+  const qrY = pad + textH + 12;
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) ctx.fillRect(qrX + c * cell, qrY + r * cell, cell, cell);
   const a = document.createElement('a');
-  a.download = (document.getElementById('label-name-input').value.trim() || 'label') + '.jpg';
-  a.href = canvas.toDataURL('image/jpeg', 0.95);
+  a.download = (name.trim() || 'label') + '.jpg';
+  a.href = canvas.toDataURL('image/jpeg', 0.97);
   a.click();
 }
 
 async function exportLabelPdf() {
-  const canvas = await _captureLabel();
+  await document.fonts.ready;
+  const name = document.getElementById('label-name-input').value || '—';
+  const exportSize = 600, pad = 28, textH = 56;
+  const qrArea = exportSize - pad * 2 - textH - 12;
+  const qr = qrcode(0, 'M');
+  qr.addData(_labelTargetUrl());
+  qr.make();
+  const n = qr.getModuleCount();
+  const cell = Math.floor(qrArea / n);
+  const actualQr = n * cell;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = exportSize;
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, exportSize, exportSize);
+  ctx.fillStyle = '#111';
+  ctx.font = 'bold 32px Geist, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(name, exportSize / 2, pad + textH / 2);
+  const qrX = Math.round((exportSize - actualQr) / 2);
+  const qrY = pad + textH + 12;
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) ctx.fillRect(qrX + c * cell, qrY + r * cell, cell, cell);
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
-  const mmW = 90;
-  const mmH = (canvas.height / canvas.width) * mmW;
-  pdf.addImage(imgData, 'JPEG', (210 - mmW) / 2, (297 - mmH) / 2, mmW, mmH);
-  pdf.save((document.getElementById('label-name-input').value.trim() || 'label') + '.pdf');
+  const mmW = 90, mmH = 90;
+  pdf.addImage(canvas.toDataURL('image/jpeg', 0.97), 'JPEG', (210 - mmW) / 2, (297 - mmH) / 2, mmW, mmH);
+  pdf.save((name.trim() || 'label') + '.pdf');
 }
 
 function printLabel() {
